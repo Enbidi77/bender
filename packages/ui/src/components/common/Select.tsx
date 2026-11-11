@@ -32,10 +32,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
               </option>
             ))}
           </select>
-          <ChevronDown
-            size={12}
-            className="absolute right-2 text-gray-400 pointer-events-none"
-          />
+          <ChevronDown size={12} className="absolute right-2 text-gray-400 pointer-events-none" />
         </div>
       </div>
     );

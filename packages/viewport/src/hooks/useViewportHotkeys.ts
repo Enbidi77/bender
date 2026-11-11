@@ -3,13 +3,8 @@ import { useViewportContext } from '../context/ViewportContext.js';
 import { useCameraControls } from './useCameraControls.js';
 
 export function useViewportHotkeys(enabled = true) {
-  const {
-    setGizmoType,
-    setShadingMode,
-    config,
-    toggleCameraProjection,
-    toggleSnapping,
-  } = useViewportContext();
+  const { setGizmoType, setShadingMode, config, toggleCameraProjection, toggleSnapping } =
+    useViewportContext();
 
   const { focusSelection, setStandardViewpoint } = useCameraControls();
 

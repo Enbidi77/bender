@@ -3,14 +3,8 @@ import { useViewportContext } from '../context/ViewportContext.js';
 import { VIEWPOINT_CONFIGS } from '../constants.js';
 
 export const ViewportInfoOverlay: React.FC = () => {
-  const {
-    config,
-    cameraProjection,
-    activeViewpoint,
-    showOverlays,
-    showStats,
-    sceneStore,
-  } = useViewportContext();
+  const { config, cameraProjection, activeViewpoint, showOverlays, showStats, sceneStore } =
+    useViewportContext();
 
   const activeNodeId = useSyncExternalStore(
     sceneStore.subscribe,
@@ -22,10 +16,7 @@ export const ViewportInfoOverlay: React.FC = () => {
     () => sceneStore.getState().selectedNodeIds.length,
   );
 
-  const nodes = useSyncExternalStore(
-    sceneStore.subscribe,
-    () => sceneStore.getState().nodes,
-  );
+  const nodes = useSyncExternalStore(sceneStore.subscribe, () => sceneStore.getState().nodes);
 
   if (!showOverlays) {
     return null;

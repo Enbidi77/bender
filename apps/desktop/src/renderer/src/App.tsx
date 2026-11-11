@@ -57,10 +57,7 @@ export const AppContent: React.FC = () => {
   const commandManager = commandManagerRef.current;
 
   // Subscribe to scene graph state
-  const sceneState = useSyncExternalStore(
-    sceneStore.subscribe,
-    sceneStore.getState,
-  );
+  const sceneState = useSyncExternalStore(sceneStore.subscribe, sceneStore.getState);
 
   // Subscribe to Undo/Redo state
   const [undoRedoState, setUndoRedoState] = useState(() => commandManager.getState());
@@ -363,7 +360,11 @@ export const AppContent: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't intercept shortcuts when typing in an input
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT'
+      ) {
         return;
       }
 
@@ -458,40 +459,179 @@ export const AppContent: React.FC = () => {
   // Command Palette Action list
   const commandPaletteActions: CommandPaletteAction[] = [
     // Add Mesh
-    { id: 'cp:add:cube', name: 'Add Cube', category: 'Add', onExecute: () => handleAddPrimitive('cube') },
-    { id: 'cp:add:sphere', name: 'Add Sphere', category: 'Add', onExecute: () => handleAddPrimitive('sphere') },
-    { id: 'cp:add:cylinder', name: 'Add Cylinder', category: 'Add', onExecute: () => handleAddPrimitive('cylinder') },
-    { id: 'cp:add:cone', name: 'Add Cone', category: 'Add', onExecute: () => handleAddPrimitive('cone') },
-    { id: 'cp:add:plane', name: 'Add Plane', category: 'Add', onExecute: () => handleAddPrimitive('plane') },
-    { id: 'cp:add:torus', name: 'Add Torus', category: 'Add', onExecute: () => handleAddPrimitive('torus') },
-    { id: 'cp:add:light', name: 'Add Light', category: 'Add', onExecute: () => handleAddPrimitive('light') },
-    { id: 'cp:add:camera', name: 'Add Camera', category: 'Add', onExecute: () => handleAddPrimitive('camera') },
+    {
+      id: 'cp:add:cube',
+      name: 'Add Cube',
+      category: 'Add',
+      onExecute: () => handleAddPrimitive('cube'),
+    },
+    {
+      id: 'cp:add:sphere',
+      name: 'Add Sphere',
+      category: 'Add',
+      onExecute: () => handleAddPrimitive('sphere'),
+    },
+    {
+      id: 'cp:add:cylinder',
+      name: 'Add Cylinder',
+      category: 'Add',
+      onExecute: () => handleAddPrimitive('cylinder'),
+    },
+    {
+      id: 'cp:add:cone',
+      name: 'Add Cone',
+      category: 'Add',
+      onExecute: () => handleAddPrimitive('cone'),
+    },
+    {
+      id: 'cp:add:plane',
+      name: 'Add Plane',
+      category: 'Add',
+      onExecute: () => handleAddPrimitive('plane'),
+    },
+    {
+      id: 'cp:add:torus',
+      name: 'Add Torus',
+      category: 'Add',
+      onExecute: () => handleAddPrimitive('torus'),
+    },
+    {
+      id: 'cp:add:light',
+      name: 'Add Light',
+      category: 'Add',
+      onExecute: () => handleAddPrimitive('light'),
+    },
+    {
+      id: 'cp:add:camera',
+      name: 'Add Camera',
+      category: 'Add',
+      onExecute: () => handleAddPrimitive('camera'),
+    },
     // Tools
-    { id: 'cp:tool:translate', name: 'Translate Tool', category: 'Edit', shortcut: 'G', onExecute: () => setGizmoType('translate') },
-    { id: 'cp:tool:rotate', name: 'Rotate Tool', category: 'Edit', shortcut: 'R', onExecute: () => setGizmoType('rotate') },
-    { id: 'cp:tool:scale', name: 'Scale Tool', category: 'Edit', shortcut: 'S', onExecute: () => setGizmoType('scale') },
-    { id: 'cp:tool:select', name: 'Select Box', category: 'Edit', shortcut: 'W', onExecute: () => setGizmoType('none') },
+    {
+      id: 'cp:tool:translate',
+      name: 'Translate Tool',
+      category: 'Edit',
+      shortcut: 'G',
+      onExecute: () => setGizmoType('translate'),
+    },
+    {
+      id: 'cp:tool:rotate',
+      name: 'Rotate Tool',
+      category: 'Edit',
+      shortcut: 'R',
+      onExecute: () => setGizmoType('rotate'),
+    },
+    {
+      id: 'cp:tool:scale',
+      name: 'Scale Tool',
+      category: 'Edit',
+      shortcut: 'S',
+      onExecute: () => setGizmoType('scale'),
+    },
+    {
+      id: 'cp:tool:select',
+      name: 'Select Box',
+      category: 'Edit',
+      shortcut: 'W',
+      onExecute: () => setGizmoType('none'),
+    },
     // Object Ops
-    { id: 'cp:obj:duplicate', name: 'Duplicate Object', category: 'Object', shortcut: 'Shift+D', onExecute: handleDuplicateSelected },
-    { id: 'cp:obj:delete', name: 'Delete Object', category: 'Object', shortcut: 'X / Del', onExecute: handleDeleteSelected },
+    {
+      id: 'cp:obj:duplicate',
+      name: 'Duplicate Object',
+      category: 'Object',
+      shortcut: 'Shift+D',
+      onExecute: handleDuplicateSelected,
+    },
+    {
+      id: 'cp:obj:delete',
+      name: 'Delete Object',
+      category: 'Object',
+      shortcut: 'X / Del',
+      onExecute: handleDeleteSelected,
+    },
     // Shading
-    { id: 'cp:shade:wire', name: 'Shading: Wireframe', category: 'View', onExecute: () => setShadingMode('wireframe') },
-    { id: 'cp:shade:solid', name: 'Shading: Solid', category: 'View', onExecute: () => setShadingMode('solid') },
-    { id: 'cp:shade:mat', name: 'Shading: Material Preview', category: 'View', onExecute: () => setShadingMode('material') },
-    { id: 'cp:shade:render', name: 'Shading: Rendered', category: 'View', onExecute: () => setShadingMode('rendered') },
+    {
+      id: 'cp:shade:wire',
+      name: 'Shading: Wireframe',
+      category: 'View',
+      onExecute: () => setShadingMode('wireframe'),
+    },
+    {
+      id: 'cp:shade:solid',
+      name: 'Shading: Solid',
+      category: 'View',
+      onExecute: () => setShadingMode('solid'),
+    },
+    {
+      id: 'cp:shade:mat',
+      name: 'Shading: Material Preview',
+      category: 'View',
+      onExecute: () => setShadingMode('material'),
+    },
+    {
+      id: 'cp:shade:render',
+      name: 'Shading: Rendered',
+      category: 'View',
+      onExecute: () => setShadingMode('rendered'),
+    },
     // File
-    { id: 'cp:file:new', name: 'New Project', category: 'File', shortcut: 'Ctrl+N', onExecute: handleNewProject },
-    { id: 'cp:file:open', name: 'Open Project', category: 'File', shortcut: 'Ctrl+O', onExecute: handleOpenProject },
-    { id: 'cp:file:save', name: 'Save Project', category: 'File', shortcut: 'Ctrl+S', onExecute: handleSaveProject },
-    { id: 'cp:file:saveas', name: 'Save Project As...', category: 'File', shortcut: 'Ctrl+Shift+S', onExecute: handleSaveAsProject },
+    {
+      id: 'cp:file:new',
+      name: 'New Project',
+      category: 'File',
+      shortcut: 'Ctrl+N',
+      onExecute: handleNewProject,
+    },
+    {
+      id: 'cp:file:open',
+      name: 'Open Project',
+      category: 'File',
+      shortcut: 'Ctrl+O',
+      onExecute: handleOpenProject,
+    },
+    {
+      id: 'cp:file:save',
+      name: 'Save Project',
+      category: 'File',
+      shortcut: 'Ctrl+S',
+      onExecute: handleSaveProject,
+    },
+    {
+      id: 'cp:file:saveas',
+      name: 'Save Project As...',
+      category: 'File',
+      shortcut: 'Ctrl+Shift+S',
+      onExecute: handleSaveAsProject,
+    },
     // General
-    { id: 'cp:app:shortcuts', name: 'Keyboard Shortcuts Cheat Sheet', category: 'General', shortcut: 'Ctrl+/', onExecute: () => setIsShortcutsOpen(true) },
-    { id: 'cp:app:prefs', name: 'Preferences', category: 'General', shortcut: 'Ctrl+,', onExecute: () => setIsPreferencesOpen(true) },
-    { id: 'cp:app:about', name: 'About Blender-ELT', category: 'General', onExecute: () => setIsAboutOpen(true) },
+    {
+      id: 'cp:app:shortcuts',
+      name: 'Keyboard Shortcuts Cheat Sheet',
+      category: 'General',
+      shortcut: 'Ctrl+/',
+      onExecute: () => setIsShortcutsOpen(true),
+    },
+    {
+      id: 'cp:app:prefs',
+      name: 'Preferences',
+      category: 'General',
+      shortcut: 'Ctrl+,',
+      onExecute: () => setIsPreferencesOpen(true),
+    },
+    {
+      id: 'cp:app:about',
+      name: 'About Blender-ELT',
+      category: 'General',
+      onExecute: () => setIsAboutOpen(true),
+    },
   ];
 
   // Active node for properties inspector
-  const activeNode = sceneState.activeNodeId ? sceneState.nodes[sceneState.activeNodeId] || null : null;
+  const activeNode = sceneState.activeNodeId
+    ? sceneState.nodes[sceneState.activeNodeId] || null
+    : null;
   const activeNodeMaterialConfig =
     (activeNode?.metadata?.materialConfig as PBRMaterialConfig) || undefined;
 

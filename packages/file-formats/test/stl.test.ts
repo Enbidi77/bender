@@ -11,10 +11,7 @@ import {
 describe('STL Support (Binary & ASCII)', () => {
   const createTestMesh = (): THREE.Mesh => {
     const geo = new THREE.BufferGeometry();
-    const vertices = new Float32Array([
-      0, 0, 0, 1, 0, 0, 0, 1, 0,
-      1, 0, 0, 1, 1, 0, 0, 1, 0,
-    ]);
+    const vertices = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0]);
     geo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
     geo.computeVertexNormals();
     return new THREE.Mesh(geo, new THREE.MeshBasicMaterial());
@@ -43,7 +40,11 @@ describe('STL Support (Binary & ASCII)', () => {
     // Two triangles = 84 + 2 * 50 = 184 bytes
     expect(binaryOutput.byteLength).toBe(184);
 
-    const view = new DataView(binaryOutput.buffer, binaryOutput.byteOffset, binaryOutput.byteLength);
+    const view = new DataView(
+      binaryOutput.buffer,
+      binaryOutput.byteOffset,
+      binaryOutput.byteLength,
+    );
     const triangleCount = view.getUint32(80, true);
     expect(triangleCount).toBe(2);
   });

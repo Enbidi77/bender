@@ -11,14 +11,8 @@ import {
   deserializeProject,
   createProjectMetadata,
 } from '@blender-elt/persistence';
-import {
-  exportScene,
-  importScene,
-} from '@blender-elt/file-formats';
-import {
-  createPrimitiveGeometry,
-  bufferGeometryToMeshData,
-} from '@blender-elt/modeling';
+import { exportScene, importScene } from '@blender-elt/file-formats';
+import { createPrimitiveGeometry, bufferGeometryToMeshData } from '@blender-elt/modeling';
 import type { SceneGraphState } from '@blender-elt/scene-core';
 
 // Helper to trigger browser download

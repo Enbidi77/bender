@@ -1,13 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Sliders,
-  Move,
-  Palette,
-  Sun,
-  Video,
-  Box,
-  RotateCcw,
-} from 'lucide-react';
+import { Sliders, Move, Palette, Sun, Video, Box, RotateCcw } from 'lucide-react';
 import { Accordion } from '../common/Accordion.js';
 import { NumberInput, TextInput } from '../common/Input.js';
 import { Select } from '../common/Select.js';
@@ -28,7 +20,10 @@ import type {
 export interface PropertiesPanelProps {
   node: SceneNode | null;
   materialConfig?: PBRMaterialConfig;
-  onUpdateTransform?: (nodeId: string, transform: { position?: Vector3; rotation?: Euler; scale?: Vector3 }) => void;
+  onUpdateTransform?: (
+    nodeId: string,
+    transform: { position?: Vector3; rotation?: Euler; scale?: Vector3 },
+  ) => void;
   onUpdateName?: (nodeId: string, name: string) => void;
   onUpdateMaterial?: (nodeId: string, material: Partial<PBRMaterialConfig>) => void;
   onApplyMaterialPreset?: (nodeId: string, preset: MaterialPreset) => void;
@@ -90,7 +85,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   }
 
   // Radians to degrees converter for Euler
-  const radToDeg = (rad: number) => Math.round((rad * (180 / Math.PI)) * 10) / 10;
+  const radToDeg = (rad: number) => Math.round(rad * (180 / Math.PI) * 10) / 10;
   const degToRad = (deg: number) => deg * (Math.PI / 180);
 
   const pos = node.transform.position;
@@ -345,9 +340,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
             <div>
               <div className="flex items-center justify-between text-[11px] text-gray-400 mb-1">
                 <span>Opacity</span>
-                <span className="font-mono text-gray-300">
-                  {materialConfig.opacity.toFixed(2)}
-                </span>
+                <span className="font-mono text-gray-300">{materialConfig.opacity.toFixed(2)}</span>
               </div>
               <input
                 type="range"

@@ -54,7 +54,7 @@ function rgbToHex(r: number, g: number, b: number): string {
  */
 export function exportOBJ(
   input: ExportInput,
-  options?: ExportOptions & { mtlFileName?: string }
+  options?: ExportOptions & { mtlFileName?: string },
 ): OBJExportResult {
   const threeObject = resolveThreeObject(input);
   const upAxis = options?.upAxis || 'Y';
@@ -307,7 +307,8 @@ export function parseOBJToMeshData(objText: string): IMeshData {
     const parts = faceVertexStr.split('/');
     const vIndex = resolveIndex(parts[0], rawPositions.length);
     const vtIndex = parts[1] && parts[1].length > 0 ? resolveIndex(parts[1], rawUVs.length) : -1;
-    const vnIndex = parts[2] && parts[2].length > 0 ? resolveIndex(parts[2], rawNormals.length) : -1;
+    const vnIndex =
+      parts[2] && parts[2].length > 0 ? resolveIndex(parts[2], rawNormals.length) : -1;
 
     const pos = rawPositions[vIndex] || [0, 0, 0];
     outPositions.push(pos[0], pos[1], pos[2]);
@@ -326,7 +327,7 @@ export function parseOBJToMeshData(objText: string): IMeshData {
       outUVs.push(0, 0);
     }
 
-    const newIndex = (outPositions.length / 3) - 1;
+    const newIndex = outPositions.length / 3 - 1;
     vertexCache.set(faceVertexStr, newIndex);
     return newIndex;
   };
@@ -380,9 +381,21 @@ export function parseOBJToMeshData(objText: string): IMeshData {
       const i1 = outIndices[i + 1] * 3;
       const i2 = outIndices[i + 2] * 3;
 
-      const p0 = new THREE.Vector3(positionsFloat[i0], positionsFloat[i0 + 1], positionsFloat[i0 + 2]);
-      const p1 = new THREE.Vector3(positionsFloat[i1], positionsFloat[i1 + 1], positionsFloat[i1 + 2]);
-      const p2 = new THREE.Vector3(positionsFloat[i2], positionsFloat[i2 + 1], positionsFloat[i2 + 2]);
+      const p0 = new THREE.Vector3(
+        positionsFloat[i0],
+        positionsFloat[i0 + 1],
+        positionsFloat[i0 + 2],
+      );
+      const p1 = new THREE.Vector3(
+        positionsFloat[i1],
+        positionsFloat[i1 + 1],
+        positionsFloat[i1 + 2],
+      );
+      const p2 = new THREE.Vector3(
+        positionsFloat[i2],
+        positionsFloat[i2 + 1],
+        positionsFloat[i2 + 2],
+      );
 
       const edge1 = new THREE.Vector3().subVectors(p1, p0);
       const edge2 = new THREE.Vector3().subVectors(p2, p0);
@@ -416,7 +429,7 @@ export function parseOBJToMeshData(objText: string): IMeshData {
 export function importOBJ(
   objContent: string,
   mtlContent?: string,
-  options?: ImportOptions
+  options?: ImportOptions,
 ): ImportedSceneResult {
   const materials = mtlContent ? parseMTL(mtlContent) : {};
 
@@ -489,8 +502,12 @@ export function importOBJ(
       const verts = meshData.vertices as Float32Array;
       if (verts.length === 0) continue;
 
-      let minX = Infinity, minY = Infinity, minZ = Infinity;
-      let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+      let minX = Infinity,
+        minY = Infinity,
+        minZ = Infinity;
+      let maxX = -Infinity,
+        maxY = -Infinity,
+        maxZ = -Infinity;
 
       for (let i = 0; i < verts.length; i += 3) {
         minX = Math.min(minX, verts[i]);

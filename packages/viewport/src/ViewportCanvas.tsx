@@ -33,9 +33,7 @@ export const ViewportCanvas: React.FC = () => {
       onCreated={({ gl, scene }) => {
         scene.background = new THREE.Color('#1d1e22');
         gl.toneMapping =
-          config.shadingMode === 'rendered'
-            ? THREE.ACESFilmicToneMapping
-            : THREE.NoToneMapping;
+          config.shadingMode === 'rendered' ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
         gl.toneMappingExposure = 1.0;
       }}
     >

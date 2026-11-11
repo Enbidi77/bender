@@ -41,14 +41,8 @@ describe('GLTF & GLB Support', () => {
     },
     geometries: {
       'geo-cube': {
-        vertices: new Float32Array([
-          -1, -1, 1, 1, -1, 1, 1, 1, 1,
-          -1, -1, 1, 1, 1, 1, -1, 1, 1,
-        ]),
-        normals: new Float32Array([
-          0, 0, 1, 0, 0, 1, 0, 0, 1,
-          0, 0, 1, 0, 0, 1, 0, 0, 1,
-        ]),
+        vertices: new Float32Array([-1, -1, 1, 1, -1, 1, 1, 1, 1, -1, -1, 1, 1, 1, 1, -1, 1, 1]),
+        normals: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1]),
         indices: new Uint32Array([0, 1, 2, 3, 4, 5]),
       },
     },
@@ -136,7 +130,7 @@ describe('GLTF & GLB Support', () => {
     const scene = new THREE.Scene();
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(10, 20, 30),
-      new THREE.MeshStandardMaterial()
+      new THREE.MeshStandardMaterial(),
     );
     mesh.position.set(100, 200, 300);
     scene.add(mesh);

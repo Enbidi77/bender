@@ -70,7 +70,11 @@ export interface SceneGraphState {
 
   // Scene lifecycle
   resetToDefaultScene: () => void;
-  loadScene: (root: SceneRoot, nodes: Record<string, SceneNode>, collections?: Record<string, SceneCollection>) => void;
+  loadScene: (
+    root: SceneRoot,
+    nodes: Record<string, SceneNode>,
+    collections?: Record<string, SceneCollection>,
+  ) => void;
 }
 
 export function createDefaultScene(): {
@@ -399,9 +403,7 @@ export function createSceneStore(initialState?: {
             : [...state.selectedNodeIds, id];
           return {
             selectedNodeIds: next,
-            activeNodeId: already
-              ? next[next.length - 1] || null
-              : id,
+            activeNodeId: already ? next[next.length - 1] || null : id,
           };
         }
         return {
@@ -444,9 +446,7 @@ export function createSceneStore(initialState?: {
 
     getSelectedNodes: () => {
       const state = get();
-      return state.selectedNodeIds
-        .map((id) => state.nodes[id])
-        .filter((n): n is SceneNode => !!n);
+      return state.selectedNodeIds.map((id) => state.nodes[id]).filter((n): n is SceneNode => !!n);
     },
 
     // Visibility & Locking

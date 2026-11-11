@@ -16,11 +16,7 @@ export interface CommandPaletteProps {
   actions: CommandPaletteAction[];
 }
 
-export const CommandPalette: React.FC<CommandPaletteProps> = ({
-  isOpen,
-  onClose,
-  actions,
-}) => {
+export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, actions }) => {
   const [query, setQuery] = useState<string>('');
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -54,9 +50,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       setSelectedIndex((prev) => (prev + 1) % Math.max(1, filteredActions.length));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setSelectedIndex((prev) =>
-        prev === 0 ? Math.max(0, filteredActions.length - 1) : prev - 1,
-      );
+      setSelectedIndex((prev) => (prev === 0 ? Math.max(0, filteredActions.length - 1) : prev - 1));
     } else if (e.key === 'Enter') {
       e.preventDefault();
       if (filteredActions[selectedIndex]) {
@@ -99,9 +93,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         {/* Results List */}
         <div ref={listRef} className="max-h-72 overflow-y-auto p-1.5 space-y-0.5">
           {filteredActions.length === 0 ? (
-            <div className="p-6 text-center text-xs text-gray-500">
-              No matching commands found.
-            </div>
+            <div className="p-6 text-center text-xs text-gray-500">No matching commands found.</div>
           ) : (
             filteredActions.map((action, idx) => {
               const isSelected = idx === selectedIndex;
@@ -139,13 +131,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                   <div className="flex items-center gap-2">
                     {action.shortcut && (
                       <kbd
-                        className={cn(
-                          'text-[10px] font-mono px-1.5 py-0.5 rounded',
-                          {
-                            'bg-white/20 text-white': isSelected,
-                            'bg-[#202020] text-gray-400 border border-[#3e3e3e]': !isSelected,
-                          },
-                        )}
+                        className={cn('text-[10px] font-mono px-1.5 py-0.5 rounded', {
+                          'bg-white/20 text-white': isSelected,
+                          'bg-[#202020] text-gray-400 border border-[#3e3e3e]': !isSelected,
+                        })}
                       >
                         {action.shortcut}
                       </kbd>

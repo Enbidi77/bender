@@ -49,14 +49,7 @@ export interface SnapConfig {
  * Standard camera view presets inspired by Blender Numpad
  */
 export type StandardViewpoint =
-  | 'front'
-  | 'back'
-  | 'right'
-  | 'left'
-  | 'top'
-  | 'bottom'
-  | 'perspective'
-  | 'camera';
+  'front' | 'back' | 'right' | 'left' | 'top' | 'bottom' | 'perspective' | 'camera';
 
 /**
  * Context and store state for Viewport

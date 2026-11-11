@@ -72,5 +72,8 @@ export interface UnifiedExportOutput {
 export interface FileFormatConverter {
   format: SupportedFileFormat;
   export(input: ExportInput, options?: ExportOptions): Promise<string | Uint8Array>;
-  import(data: string | ArrayBuffer | Uint8Array, options?: ImportOptions): Promise<ImportedSceneResult>;
+  import(
+    data: string | ArrayBuffer | Uint8Array,
+    options?: ImportOptions,
+  ): Promise<ImportedSceneResult>;
 }

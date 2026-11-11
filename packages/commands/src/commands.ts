@@ -192,7 +192,11 @@ export class DuplicateObjectCommand extends BaseCommand {
       };
     }
 
-    store.addNode(this.duplicatedNode, this.duplicatedNode.parentId, this.duplicatedNode.collectionId);
+    store.addNode(
+      this.duplicatedNode,
+      this.duplicatedNode.parentId,
+      this.duplicatedNode.collectionId,
+    );
   }
 
   public undo(ctx: CommandContext): void {

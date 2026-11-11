@@ -1,9 +1,5 @@
 import { z } from 'zod';
-import type {
-  ProjectDocument,
-  ProjectMetadata,
-  IMeshData,
-} from '@blender-elt/contracts';
+import type { ProjectDocument, ProjectMetadata, IMeshData } from '@blender-elt/contracts';
 
 export const CURRENT_PROJECT_VERSION = '1.0.0';
 export const APP_VERSION = '0.1.0';
@@ -108,9 +104,13 @@ export const SceneNodeSchema = z.discriminatedUnion('type', [
  */
 const NumberBufferSchema = z.union([
   z.array(z.number()),
-  z.custom<Float32Array>((val) => val instanceof Float32Array || val instanceof Uint32Array || val instanceof Uint16Array, {
-    message: 'Expected typed array or number array',
-  }),
+  z.custom<Float32Array>(
+    (val) =>
+      val instanceof Float32Array || val instanceof Uint32Array || val instanceof Uint16Array,
+    {
+      message: 'Expected typed array or number array',
+    },
+  ),
 ]);
 
 export const MeshDataSchema = z.object({
@@ -177,7 +177,9 @@ export const KeyframeSchema = z.object({
   frame: z.number(),
   time: z.number(),
   value: z.union([z.number(), z.array(z.number())]),
-  interpolation: z.enum(['linear', 'bezier', 'step', 'ease-in', 'ease-out', 'ease-in-out']).optional(),
+  interpolation: z
+    .enum(['linear', 'bezier', 'step', 'ease-in', 'ease-out', 'ease-in-out'])
+    .optional(),
   inTangent: z.tuple([z.number(), z.number()]).optional(),
   outTangent: z.tuple([z.number(), z.number()]).optional(),
 });
@@ -246,7 +248,10 @@ export const ProjectDocumentSchema = z.object({
 /**
  * Creates default project metadata
  */
-export function createProjectMetadata(name = 'Untitled Project', author = 'Blender-ELT User'): ProjectMetadata {
+export function createProjectMetadata(
+  name = 'Untitled Project',
+  author = 'Blender-ELT User',
+): ProjectMetadata {
   const now = new Date().toISOString();
   return {
     name,
@@ -269,11 +274,7 @@ function normalizeMeshDataForSerialization(geo: IMeshData): IMeshData {
         ? geo.normals
         : Array.from(geo.normals)
       : undefined,
-    uvs: geo.uvs
-      ? Array.isArray(geo.uvs)
-        ? geo.uvs
-        : Array.from(geo.uvs)
-      : undefined,
+    uvs: geo.uvs ? (Array.isArray(geo.uvs) ? geo.uvs : Array.from(geo.uvs)) : undefined,
     indices: geo.indices
       ? Array.isArray(geo.indices)
         ? geo.indices
@@ -286,7 +287,7 @@ function normalizeMeshDataForSerialization(geo: IMeshData): IMeshData {
  * Validates any object against ProjectDocument schema with formatted errors
  */
 export function validateProjectDocument(
-  data: unknown
+  data: unknown,
 ): { success: true; data: ProjectDocument } | { success: false; errors: string[] } {
   const parseResult = ProjectDocumentSchema.safeParse(data);
   if (parseResult.success) {
@@ -297,7 +298,7 @@ export function validateProjectDocument(
   }
 
   const errors = parseResult.error.issues.map(
-    (issue) => `[${issue.path.join('.') || 'root'}]: ${issue.message}`
+    (issue) => `[${issue.path.join('.') || 'root'}]: ${issue.message}`,
   );
   return { success: false, errors };
 }
@@ -305,10 +306,7 @@ export function validateProjectDocument(
 /**
  * Serializes a ProjectDocument to formatted JSON string (.belt file format)
  */
-export function serializeProject(
-  doc: ProjectDocument,
-  options?: { pretty?: boolean }
-): string {
+export function serializeProject(doc: ProjectDocument, options?: { pretty?: boolean }): string {
   // Normalize geometries to ensure clean JSON arrays
   const normalizedGeometries: Record<string, IMeshData> = {};
   for (const [id, geo] of Object.entries(doc.geometries)) {
@@ -353,7 +351,8 @@ export function deserializeProject(jsonString: string): ProjectDocument {
   const rawDoc = parsed as Record<string, unknown>;
 
   // Check version compatibility
-  const version = (rawDoc.version as string) || (rawDoc.metadata as Record<string, unknown>)?.version;
+  const version =
+    (rawDoc.version as string) || (rawDoc.metadata as Record<string, unknown>)?.version;
   if (!version) {
     throw new Error('Invalid project file format: missing version identifier');
   }
@@ -368,7 +367,8 @@ export function deserializeProject(jsonString: string): ProjectDocument {
   const restoredGeometries: Record<string, IMeshData> = {};
   for (const [id, geo] of Object.entries(doc.geometries)) {
     restoredGeometries[id] = {
-      vertices: geo.vertices instanceof Float32Array ? geo.vertices : new Float32Array(geo.vertices),
+      vertices:
+        geo.vertices instanceof Float32Array ? geo.vertices : new Float32Array(geo.vertices),
       normals: geo.normals
         ? geo.normals instanceof Float32Array
           ? geo.normals

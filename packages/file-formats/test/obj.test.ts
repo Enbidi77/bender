@@ -1,11 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import {
-  exportOBJ,
-  parseOBJToMeshData,
-  parseMTL,
-  importOBJ,
-} from '../src/index.js';
+import { exportOBJ, parseOBJToMeshData, parseMTL, importOBJ } from '../src/index.js';
 
 describe('OBJ & MTL Support', () => {
   it('exports mesh into Wavefront .obj format with v, vn, vt, and f', () => {
@@ -48,7 +43,7 @@ describe('OBJ & MTL Support', () => {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute(
       'position',
-      new THREE.BufferAttribute(new Float32Array([0, 10, 5, 0, 10, 0, 10, 10, 0]), 3)
+      new THREE.BufferAttribute(new Float32Array([0, 10, 5, 0, 10, 0, 10, 10, 0]), 3),
     );
     const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial());
     scene.add(mesh);

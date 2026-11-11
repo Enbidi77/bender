@@ -24,11 +24,7 @@ export interface MenuBarProps {
   customCategories?: MenuCategory[];
 }
 
-export const MenuBar: React.FC<MenuBarProps> = ({
-  onAction,
-  className = '',
-  customCategories,
-}) => {
+export const MenuBar: React.FC<MenuBarProps> = ({ onAction, className = '', customCategories }) => {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [activeSubmenuId, setActiveSubmenuId] = useState<string | null>(null);
   const menuBarRef = useRef<HTMLDivElement>(null);

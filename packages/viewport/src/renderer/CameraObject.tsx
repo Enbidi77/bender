@@ -8,7 +8,8 @@ export interface CameraObjectProps {
 }
 
 export const CameraObject: React.FC<CameraObjectProps> = ({ node }) => {
-  const { sceneObjectsRef, hoveredNodeId, setHoveredNodeId, handleNodeSelect } = useViewportContext();
+  const { sceneObjectsRef, hoveredNodeId, setHoveredNodeId, handleNodeSelect } =
+    useViewportContext();
   const groupRef = useRef<THREE.Group>(null);
 
   // Register with sceneObjectsRef for gizmo and selection
@@ -34,18 +35,68 @@ export const CameraObject: React.FC<CameraObjectProps> = ({ node }) => {
 
     const vertices = new Float32Array([
       // Apex to base corners
-      0, 0, 0,  -w,  h, -d,
-      0, 0, 0,   w,  h, -d,
-      0, 0, 0,   w, -h, -d,
-      0, 0, 0,  -w, -h, -d,
+      0,
+      0,
+      0,
+      -w,
+      h,
+      -d,
+      0,
+      0,
+      0,
+      w,
+      h,
+      -d,
+      0,
+      0,
+      0,
+      w,
+      -h,
+      -d,
+      0,
+      0,
+      0,
+      -w,
+      -h,
+      -d,
       // Base rectangle
-      -w,  h, -d,   w,  h, -d,
-       w,  h, -d,   w, -h, -d,
-       w, -h, -d,  -w, -h, -d,
-      -w, -h, -d,  -w,  h, -d,
+      -w,
+      h,
+      -d,
+      w,
+      h,
+      -d,
+      w,
+      h,
+      -d,
+      w,
+      -h,
+      -d,
+      w,
+      -h,
+      -d,
+      -w,
+      -h,
+      -d,
+      -w,
+      -h,
+      -d,
+      -w,
+      h,
+      -d,
       // Up indicator triangle on top
-      0, h, -d,   0, h + 0.3, -d,
-      0, h + 0.3, -d,  0.2, h, -d,
+      0,
+      h,
+      -d,
+      0,
+      h + 0.3,
+      -d,
+      0,
+      h + 0.3,
+      -d,
+      0.2,
+      h,
+      -d,
     ]);
 
     geo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
@@ -86,11 +137,7 @@ export const CameraObject: React.FC<CameraObjectProps> = ({ node }) => {
           }
         }}
       >
-        <lineBasicMaterial
-          color={isHovered ? '#64b5f6' : '#90caf9'}
-          transparent
-          opacity={0.85}
-        />
+        <lineBasicMaterial color={isHovered ? '#64b5f6' : '#90caf9'} transparent opacity={0.85} />
       </lineSegments>
     </group>
   );

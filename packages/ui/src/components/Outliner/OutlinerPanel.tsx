@@ -269,9 +269,7 @@ export const OutlinerPanel: React.FC<OutlinerPanelProps> = ({
                   <Folder size={12} style={{ color: col.color || '#4772b3' }} />
                   <span>{col.name}</span>
                 </div>
-                <span className="text-[10px] text-gray-500 font-mono">
-                  {col.nodeIds.length}
-                </span>
+                <span className="text-[10px] text-gray-500 font-mono">{col.nodeIds.length}</span>
               </div>
 
               {!isCollapsed && (

@@ -98,9 +98,7 @@ export const ViewportToolbar: React.FC = () => {
       {/* Transform Space (Global / Local) */}
       <button
         type="button"
-        onClick={() =>
-          setTransformSpace(config.transformSpace === 'world' ? 'local' : 'world')
-        }
+        onClick={() => setTransformSpace(config.transformSpace === 'world' ? 'local' : 'world')}
         title={`Orientation: ${config.transformSpace === 'world' ? 'Global' : 'Local'}`}
         className="flex items-center gap-1 bg-[#25262b]/90 backdrop-blur-md px-2 py-1 rounded border border-[#3e404b] text-gray-300 hover:text-white hover:bg-[#34363f] shadow-lg text-[11px]"
       >
@@ -128,10 +126,18 @@ export const ViewportToolbar: React.FC = () => {
             onChange={(e) => setSnapConfig({ translationSnap: Number(e.target.value) })}
             className="bg-transparent text-gray-200 text-[11px] px-1 py-0.5 focus:outline-none cursor-pointer"
           >
-            <option value="0.1" className="bg-[#25262b]">0.1m</option>
-            <option value="0.5" className="bg-[#25262b]">0.5m</option>
-            <option value="1.0" className="bg-[#25262b]">1.0m</option>
-            <option value="2.0" className="bg-[#25262b]">2.0m</option>
+            <option value="0.1" className="bg-[#25262b]">
+              0.1m
+            </option>
+            <option value="0.5" className="bg-[#25262b]">
+              0.5m
+            </option>
+            <option value="1.0" className="bg-[#25262b]">
+              1.0m
+            </option>
+            <option value="2.0" className="bg-[#25262b]">
+              2.0m
+            </option>
           </select>
         )}
       </div>
@@ -215,9 +221,7 @@ export const ViewportToolbar: React.FC = () => {
         }
         title="Toggle Floor Grid"
         className={`p-1.5 rounded bg-[#25262b]/90 backdrop-blur-md border border-[#3e404b] shadow-lg transition-colors ${
-          config.grid.visible
-            ? 'text-blue-400'
-            : 'text-gray-500 hover:text-gray-300'
+          config.grid.visible ? 'text-blue-400' : 'text-gray-500 hover:text-gray-300'
         }`}
       >
         <GridIcon size={14} />

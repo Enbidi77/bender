@@ -1,8 +1,4 @@
-import type {
-  SupportedFileFormat,
-  ImportOptions,
-  ExportOptions,
-} from '@blender-elt/contracts';
+import type { SupportedFileFormat, ImportOptions, ExportOptions } from '@blender-elt/contracts';
 
 // Polyfills
 export { ensureNodePolyfills } from './utils/polyfill.js';
@@ -22,20 +18,10 @@ export {
 } from './bridge.js';
 
 // GLTF & GLB
-export {
-  exportGLTF,
-  exportGLB,
-  importGLTF,
-  importGLB,
-} from './gltf.js';
+export { exportGLTF, exportGLB, importGLTF, importGLB } from './gltf.js';
 
 // OBJ & MTL
-export {
-  exportOBJ,
-  parseMTL,
-  parseOBJToMeshData,
-  importOBJ,
-} from './obj.js';
+export { exportOBJ, parseMTL, parseOBJToMeshData, importOBJ } from './obj.js';
 
 // STL
 export {
@@ -73,7 +59,12 @@ export {
 import { exportGLTF, exportGLB, importGLTF } from './gltf.js';
 import { exportOBJ, importOBJ } from './obj.js';
 import { exportSTL, importSTL } from './stl.js';
-import type { ExportInput, ImportedSceneResult, UnifiedExportOutput, FileFormatConverter } from './types.js';
+import type {
+  ExportInput,
+  ImportedSceneResult,
+  UnifiedExportOutput,
+  FileFormatConverter,
+} from './types.js';
 
 /**
  * Unified high-level scene export function supporting all standard formats
@@ -81,7 +72,7 @@ import type { ExportInput, ImportedSceneResult, UnifiedExportOutput, FileFormatC
 export async function exportScene(
   format: SupportedFileFormat,
   input: ExportInput,
-  options?: ExportOptions
+  options?: ExportOptions,
 ): Promise<UnifiedExportOutput> {
   switch (format) {
     case 'gltf': {
@@ -133,7 +124,7 @@ export async function exportScene(
 export async function importScene(
   format: SupportedFileFormat,
   data: string | ArrayBuffer | Uint8Array,
-  options?: ImportOptions
+  options?: ImportOptions,
 ): Promise<ImportedSceneResult> {
   switch (format) {
     case 'gltf':

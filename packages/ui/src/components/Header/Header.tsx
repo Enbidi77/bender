@@ -1,14 +1,5 @@
 import React from 'react';
-import {
-  Undo2,
-  Redo2,
-  Sun,
-  Moon,
-  Search,
-  Minus,
-  Square,
-  X,
-} from 'lucide-react';
+import { Undo2, Redo2, Sun, Moon, Search, Minus, Square, X } from 'lucide-react';
 import { MenuBar, type MenuCategory } from './MenuBar.js';
 import { useTheme } from '../../theme/ThemeContext.js';
 import { cn } from '../common/Button.js';

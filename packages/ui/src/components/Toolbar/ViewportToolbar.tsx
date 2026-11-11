@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
-import {
-  MousePointer,
-  Move,
-  RotateCw,
-  Maximize2,
-  Box,
-  Compass,
-} from 'lucide-react';
+import { MousePointer, Move, RotateCw, Maximize2, Box, Compass } from 'lucide-react';
 import { cn } from '../common/Button.js';
 import type { GizmoType, PrimitiveType } from '@blender-elt/contracts';
 

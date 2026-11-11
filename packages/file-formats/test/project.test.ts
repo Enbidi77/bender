@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type {
-  ProjectDocument,
-  MeshNode,
-  CameraNode,
-  LightNode,
-} from '@blender-elt/contracts';
+import type { ProjectDocument, MeshNode, CameraNode, LightNode } from '@blender-elt/contracts';
 import {
   serializeProject,
   deserializeProject,
@@ -155,7 +150,9 @@ describe('ProjectDocument (.belt / JSON) Serializer & Deserializer', () => {
   });
 
   it('throws descriptive error on malformed JSON string', () => {
-    expect(() => deserializeProject('{ invalid json ...')).toThrowError(/Failed to parse .belt project JSON/);
+    expect(() => deserializeProject('{ invalid json ...')).toThrowError(
+      /Failed to parse .belt project JSON/,
+    );
   });
 
   it('throws descriptive error when version is missing', () => {

@@ -113,9 +113,9 @@ export const SceneNodeSchema = z.union([
 ]);
 
 export const IMeshDataSchema = z.object({
-  vertices: z.union([z.array(z.number()), z.instanceof(Float32Array)]).transform((v) =>
-    Array.isArray(v) ? v : Array.from(v),
-  ),
+  vertices: z
+    .union([z.array(z.number()), z.instanceof(Float32Array)])
+    .transform((v) => (Array.isArray(v) ? v : Array.from(v))),
   normals: z
     .union([z.array(z.number()), z.instanceof(Float32Array)])
     .transform((v) => (Array.isArray(v) ? v : Array.from(v)))

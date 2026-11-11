@@ -6,15 +6,9 @@ import type { SceneNode } from '@blender-elt/contracts';
 export const SceneRenderer: React.FC = () => {
   const { sceneStore } = useViewportContext();
 
-  const nodes = useSyncExternalStore(
-    sceneStore.subscribe,
-    () => sceneStore.getState().nodes,
-  );
+  const nodes = useSyncExternalStore(sceneStore.subscribe, () => sceneStore.getState().nodes);
 
-  const root = useSyncExternalStore(
-    sceneStore.subscribe,
-    () => sceneStore.getState().root,
-  );
+  const root = useSyncExternalStore(sceneStore.subscribe, () => sceneStore.getState().root);
 
   // Top-level nodes (attached to root or without parent)
   const topLevelNodes = useMemo(() => {

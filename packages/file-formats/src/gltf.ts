@@ -1,5 +1,8 @@
 import * as THREE from 'three';
-import { GLTFExporter, type GLTFExporterOptions } from 'three/examples/jsm/exporters/GLTFExporter.js';
+import {
+  GLTFExporter,
+  type GLTFExporterOptions,
+} from 'three/examples/jsm/exporters/GLTFExporter.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { ExportOptions, ImportOptions } from '@blender-elt/contracts';
 import { ensureNodePolyfills } from './utils/polyfill.js';
@@ -23,7 +26,7 @@ function resolveThreeObject(input: ExportInput): THREE.Object3D {
  */
 export async function exportGLTF(
   input: ExportInput,
-  options?: ExportOptions
+  options?: ExportOptions,
 ): Promise<string | object> {
   ensureNodePolyfills();
   const threeObject = resolveThreeObject(input);
@@ -48,7 +51,7 @@ export async function exportGLTF(
       (error) => {
         reject(error instanceof Error ? error : new Error(String(error)));
       },
-      exporterOptions
+      exporterOptions,
     );
   });
 }
@@ -56,10 +59,7 @@ export async function exportGLTF(
 /**
  * Exports scene or domain nodes into binary GLB format
  */
-export async function exportGLB(
-  input: ExportInput,
-  options?: ExportOptions
-): Promise<Uint8Array> {
+export async function exportGLB(input: ExportInput, options?: ExportOptions): Promise<Uint8Array> {
   ensureNodePolyfills();
   const threeObject = resolveThreeObject(input);
   const exporter = new GLTFExporter();
@@ -85,7 +85,7 @@ export async function exportGLB(
       (error) => {
         reject(error instanceof Error ? error : new Error(String(error)));
       },
-      exporterOptions
+      exporterOptions,
     );
   });
 }
@@ -95,7 +95,7 @@ export async function exportGLB(
  */
 export async function importGLTF(
   data: string | ArrayBuffer | Uint8Array,
-  options?: ImportOptions
+  options?: ImportOptions,
 ): Promise<ImportedSceneResult> {
   ensureNodePolyfills();
   const loader = new GLTFLoader();
@@ -144,7 +144,7 @@ export async function importGLTF(
       },
       (error) => {
         reject(error instanceof Error ? error : new Error(String(error)));
-      }
+      },
     );
   });
 }
@@ -154,7 +154,7 @@ export async function importGLTF(
  */
 export async function importGLB(
   buffer: ArrayBuffer | Uint8Array,
-  options?: ImportOptions
+  options?: ImportOptions,
 ): Promise<ImportedSceneResult> {
   return importGLTF(buffer, options);
 }

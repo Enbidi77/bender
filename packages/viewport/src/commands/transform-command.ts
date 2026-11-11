@@ -87,6 +87,8 @@ export class TransformObjectCommand implements ICommand {
   }
 }
 
-export function createTransformObjectCommand(options: TransformCommandOptions): TransformObjectCommand {
+export function createTransformObjectCommand(
+  options: TransformCommandOptions,
+): TransformObjectCommand {
   return new TransformObjectCommand(options);
 }

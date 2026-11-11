@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+} from 'react';
 import type { StoreApi } from 'zustand/vanilla';
 import type { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
@@ -15,10 +23,7 @@ import type {
   ShadingMode,
   ViewportMode,
 } from '../types.js';
-import {
-  DEFAULT_VIEWPORT_CONFIG,
-  DEFAULT_SNAP_CONFIG,
-} from '../constants.js';
+import { DEFAULT_VIEWPORT_CONFIG, DEFAULT_SNAP_CONFIG } from '../constants.js';
 import { createSceneStore, type SceneGraphState } from '@blender-elt/scene-core';
 import { CommandManager } from '@blender-elt/commands';
 import { TransformObjectCommand } from '../commands/transform-command.js';
@@ -120,21 +125,33 @@ export const ViewportProvider: React.FC<ViewportProviderProps> = ({
     [onConfigChange],
   );
 
-  const setMode = useCallback((mode: ViewportMode) => {
-    setConfig({ mode });
-  }, [setConfig]);
+  const setMode = useCallback(
+    (mode: ViewportMode) => {
+      setConfig({ mode });
+    },
+    [setConfig],
+  );
 
-  const setGizmoType = useCallback((gizmoType: GizmoType) => {
-    setConfig({ gizmoType });
-  }, [setConfig]);
+  const setGizmoType = useCallback(
+    (gizmoType: GizmoType) => {
+      setConfig({ gizmoType });
+    },
+    [setConfig],
+  );
 
-  const setTransformSpace = useCallback((transformSpace: TransformSpace) => {
-    setConfig({ transformSpace });
-  }, [setConfig]);
+  const setTransformSpace = useCallback(
+    (transformSpace: TransformSpace) => {
+      setConfig({ transformSpace });
+    },
+    [setConfig],
+  );
 
-  const setShadingMode = useCallback((shadingMode: ShadingMode) => {
-    setConfig({ shadingMode });
-  }, [setConfig]);
+  const setShadingMode = useCallback(
+    (shadingMode: ShadingMode) => {
+      setConfig({ shadingMode });
+    },
+    [setConfig],
+  );
 
   const setSnapConfig = useCallback((updates: Partial<SnapConfig>) => {
     setSnapConfigState((prev) => ({ ...prev, ...updates }));
@@ -208,7 +225,7 @@ export const ViewportProvider: React.FC<ViewportProviderProps> = ({
     let distance = maxDim * 2.5;
     if (camera instanceof THREE.PerspectiveCamera) {
       const fovRad = (camera.fov * Math.PI) / 180;
-      distance = (maxDim / 2) / Math.tan(fovRad / 2) * 1.6;
+      distance = (maxDim / 2 / Math.tan(fovRad / 2)) * 1.6;
     } else if (camera instanceof THREE.OrthographicCamera) {
       camera.zoom = THREE.MathUtils.clamp(400 / maxDim, 10, 200);
       camera.updateProjectionMatrix();
@@ -329,17 +346,15 @@ export const ViewportProvider: React.FC<ViewportProviderProps> = ({
     ],
   );
 
-  return (
-    <ViewportContext.Provider value={contextValue}>
-      {children}
-    </ViewportContext.Provider>
-  );
+  return <ViewportContext.Provider value={contextValue}>{children}</ViewportContext.Provider>;
 };
 
 export function useViewportContext(): ViewportContextValue {
   const ctx = useContext(ViewportContext);
   if (!ctx) {
-    throw new Error('useViewportContext must be used within a ViewportProvider or ViewportContainer');
+    throw new Error(
+      'useViewportContext must be used within a ViewportProvider or ViewportContainer',
+    );
   }
   return ctx;
 }

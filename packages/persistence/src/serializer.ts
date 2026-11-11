@@ -23,7 +23,10 @@ export function createProjectMetadata(name = 'Untitled Project', author = 'User'
 /**
  * Creates a minimal default project document
  */
-export function createDefaultProjectDocument(name = 'Untitled Project', author = 'User'): ProjectDocument {
+export function createDefaultProjectDocument(
+  name = 'Untitled Project',
+  author = 'User',
+): ProjectDocument {
   return {
     version: CURRENT_PROJECT_VERSION,
     metadata: createProjectMetadata(name, author),
@@ -74,19 +77,17 @@ export function validateProjectDocument(data: unknown): {
     return { success: true, data: result.data as unknown as ProjectDocument };
   }
   const issues = (result.error as any).issues || (result.error as any).errors || [];
-  const errorMessage = issues.length > 0
-    ? issues.map((e: any) => `${e.path?.join('.') || 'root'}: ${e.message}`).join('; ')
-    : result.error.message;
+  const errorMessage =
+    issues.length > 0
+      ? issues.map((e: any) => `${e.path?.join('.') || 'root'}: ${e.message}`).join('; ')
+      : result.error.message;
   return { success: false, error: errorMessage };
 }
 
 /**
  * Serializes ProjectDocument to JSON string (.belt)
  */
-export function serializeProject(
-  doc: ProjectDocument,
-  options?: { pretty?: boolean },
-): string {
+export function serializeProject(doc: ProjectDocument, options?: { pretty?: boolean }): string {
   const updatedDoc: ProjectDocument = {
     ...doc,
     version: CURRENT_PROJECT_VERSION,
@@ -101,7 +102,7 @@ export function serializeProject(
     throw new Error(`Cannot serialize invalid project document: ${validation.error}`);
   }
 
-  const space = options?.pretty ?? true ? 2 : undefined;
+  const space = (options?.pretty ?? true) ? 2 : undefined;
   return JSON.stringify(updatedDoc, null, space);
 }
 

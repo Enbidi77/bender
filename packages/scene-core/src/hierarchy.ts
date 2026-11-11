@@ -24,10 +24,7 @@ export function traverse(
 /**
  * Returns array of ancestors from immediate parent up to root
  */
-export function getAncestors(
-  nodeId: string,
-  nodes: Record<string, SceneNode>,
-): SceneNode[] {
+export function getAncestors(nodeId: string, nodes: Record<string, SceneNode>): SceneNode[] {
   const ancestors: SceneNode[] = [];
   let current = nodes[nodeId];
 
@@ -44,10 +41,7 @@ export function getAncestors(
 /**
  * Returns all descendant nodes flattened
  */
-export function getDescendants(
-  nodeId: string,
-  nodes: Record<string, SceneNode>,
-): SceneNode[] {
+export function getDescendants(nodeId: string, nodes: Record<string, SceneNode>): SceneNode[] {
   const descendants: SceneNode[] = [];
   const node = nodes[nodeId];
   if (!node) return descendants;

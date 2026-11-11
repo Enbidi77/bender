@@ -1,10 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Grid,
-  Magnet,
-  Maximize,
-  Box,
-} from 'lucide-react';
+import { Grid, Magnet, Maximize, Box } from 'lucide-react';
 import { cn } from '../common/Button.js';
 import type { ShadingMode, CameraProjection } from '@blender-elt/contracts';
 
@@ -52,10 +47,7 @@ export const ViewportOverlays: React.FC<ViewportOverlaysProps> = ({
 
   return (
     <div
-      className={cn(
-        'flex items-center gap-2 select-none text-xs pointer-events-auto',
-        className,
-      )}
+      className={cn('flex items-center gap-2 select-none text-xs pointer-events-auto', className)}
     >
       {/* 1. Snapping Controls */}
       <div className="flex items-center bg-[#242424]/90 backdrop-blur-xs border border-[#3e3e3e] rounded p-0.5 shadow-md">

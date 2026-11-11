@@ -37,9 +37,7 @@ export function meshDataToBufferGeometry(meshData: IMeshData): THREE.BufferGeome
 
   if (meshData.uvs && meshData.uvs.length > 0) {
     const uvs =
-      meshData.uvs instanceof Float32Array
-        ? meshData.uvs
-        : new Float32Array(meshData.uvs);
+      meshData.uvs instanceof Float32Array ? meshData.uvs : new Float32Array(meshData.uvs);
     geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   }
 
@@ -108,7 +106,7 @@ export function createDefaultPBRConfig(): PBRMaterialConfig {
  */
 export function pbrConfigToThreeMaterial(
   config: PBRMaterialConfig,
-  name = 'Material'
+  name = 'Material',
 ): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({
     color: new THREE.Color(config.color),
@@ -185,7 +183,10 @@ export function beltToThree(input: {
 
       let mat: THREE.Material;
       if (meshNode.materialId && materials[meshNode.materialId]) {
-        mat = pbrConfigToThreeMaterial(materials[meshNode.materialId].config, materials[meshNode.materialId].name);
+        mat = pbrConfigToThreeMaterial(
+          materials[meshNode.materialId].config,
+          materials[meshNode.materialId].name,
+        );
       } else {
         mat = pbrConfigToThreeMaterial(createDefaultPBRConfig(), 'DefaultMaterial');
       }
@@ -199,7 +200,12 @@ export function beltToThree(input: {
       if (camNode.projection === 'orthographic') {
         obj = new THREE.OrthographicCamera(-5, 5, 5, -5, camNode.near, camNode.far);
       } else {
-        obj = new THREE.PerspectiveCamera(camNode.fov, camNode.aspect ?? 1.0, camNode.near, camNode.far);
+        obj = new THREE.PerspectiveCamera(
+          camNode.fov,
+          camNode.aspect ?? 1.0,
+          camNode.near,
+          camNode.far,
+        );
       }
     } else if (node.type === 'light') {
       const lightNode = node as LightNode;
@@ -209,16 +215,32 @@ export function beltToThree(input: {
           obj = new THREE.DirectionalLight(color, lightNode.intensity);
           break;
         case 'point':
-          obj = new THREE.PointLight(color, lightNode.intensity, lightNode.distance, lightNode.decay);
+          obj = new THREE.PointLight(
+            color,
+            lightNode.intensity,
+            lightNode.distance,
+            lightNode.decay,
+          );
           break;
         case 'spot':
-          obj = new THREE.SpotLight(color, lightNode.intensity, lightNode.distance, lightNode.angle, lightNode.penumbra, lightNode.decay);
+          obj = new THREE.SpotLight(
+            color,
+            lightNode.intensity,
+            lightNode.distance,
+            lightNode.angle,
+            lightNode.penumbra,
+            lightNode.decay,
+          );
           break;
         case 'ambient':
           obj = new THREE.AmbientLight(color, lightNode.intensity);
           break;
         case 'hemisphere':
-          obj = new THREE.HemisphereLight(color, new THREE.Color(lightNode.groundColor || '#444444'), lightNode.intensity);
+          obj = new THREE.HemisphereLight(
+            color,
+            new THREE.Color(lightNode.groundColor || '#444444'),
+            lightNode.intensity,
+          );
           break;
         default:
           obj = new THREE.DirectionalLight(color, lightNode.intensity);
@@ -232,12 +254,16 @@ export function beltToThree(input: {
     obj.visible = node.visible;
 
     // Apply transform
-    obj.position.set(node.transform.position.x, node.transform.position.y, node.transform.position.z);
+    obj.position.set(
+      node.transform.position.x,
+      node.transform.position.y,
+      node.transform.position.z,
+    );
     obj.rotation.set(
       node.transform.rotation.x,
       node.transform.rotation.y,
       node.transform.rotation.z,
-      node.transform.rotation.order || 'XYZ'
+      node.transform.rotation.order || 'XYZ',
     );
     obj.scale.set(node.transform.scale.x, node.transform.scale.y, node.transform.scale.z);
 
@@ -265,7 +291,7 @@ export function beltToThree(input: {
  */
 export function threeToBelt(
   rootObj: THREE.Object3D,
-  options?: { sceneName?: string }
+  options?: { sceneName?: string },
 ): ImportedSceneResult {
   const nodes: Record<string, SceneNode> = {};
   const geometries: Record<string, IMeshData> = {};
@@ -288,10 +314,7 @@ export function threeToBelt(
     };
   };
 
-  const processObject = (
-    obj: THREE.Object3D,
-    parentId: string | null = null
-  ): string => {
+  const processObject = (obj: THREE.Object3D, parentId: string | null = null): string => {
     const id = (obj.userData?.beltId as string) || generateId('node');
     const name = obj.name || `Object-${id}`;
     const transform = getTransform(obj);
@@ -398,7 +421,10 @@ export function threeToBelt(
   };
 
   // If rootObj is a Group or Scene with children, process each child as top-level
-  if (rootObj.type === 'Scene' || (rootObj.type === 'Group' && (!rootObj.name || rootObj.name === 'RootCollection'))) {
+  if (
+    rootObj.type === 'Scene' ||
+    (rootObj.type === 'Group' && (!rootObj.name || rootObj.name === 'RootCollection'))
+  ) {
     for (const child of rootObj.children) {
       const childId = processObject(child, null);
       rootChildrenIds.push(childId);

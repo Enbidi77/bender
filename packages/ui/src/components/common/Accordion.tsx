@@ -38,10 +38,7 @@ export const Accordion: React.FC<AccordionProps> = ({
           <span>{title}</span>
         </div>
         {headerAction && (
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="flex items-center"
-          >
+          <div onClick={(e) => e.stopPropagation()} className="flex items-center">
             {headerAction}
           </div>
         )}

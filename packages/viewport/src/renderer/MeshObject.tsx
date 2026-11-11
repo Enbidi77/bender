@@ -3,20 +3,19 @@ import * as THREE from 'three';
 import type { MeshNode, PrimitiveType } from '@blender-elt/contracts';
 import { useViewportContext } from '../context/ViewportContext.js';
 import { createPrimitiveGeometry, meshDataToBufferGeometry } from '@blender-elt/modeling';
-import { createThreeMaterial, MATERIAL_PRESETS, type PBRMaterialConfig } from '@blender-elt/materials';
+import {
+  createThreeMaterial,
+  MATERIAL_PRESETS,
+  type PBRMaterialConfig,
+} from '@blender-elt/materials';
 
 export interface MeshObjectProps {
   node: MeshNode;
 }
 
 export const MeshObject: React.FC<MeshObjectProps> = ({ node }) => {
-  const {
-    config,
-    sceneObjectsRef,
-    hoveredNodeId,
-    setHoveredNodeId,
-    handleNodeSelect,
-  } = useViewportContext();
+  const { config, sceneObjectsRef, hoveredNodeId, setHoveredNodeId, handleNodeSelect } =
+    useViewportContext();
 
   const meshRef = useRef<THREE.Mesh>(null);
 
@@ -25,7 +24,9 @@ export const MeshObject: React.FC<MeshObjectProps> = ({ node }) => {
     // Check if custom mesh data is embedded in node metadata
     if (node.metadata && 'meshData' in node.metadata && node.metadata.meshData) {
       try {
-        return meshDataToBufferGeometry(node.metadata.meshData as import('@blender-elt/contracts').IMeshData);
+        return meshDataToBufferGeometry(
+          node.metadata.meshData as import('@blender-elt/contracts').IMeshData,
+        );
       } catch (err) {
         console.warn(`Failed to build geometry from meshData for ${node.id}`, err);
       }
@@ -132,12 +133,7 @@ export const MeshObject: React.FC<MeshObjectProps> = ({ node }) => {
       {/* Wireframe overlay */}
       {wireframeGeo && (
         <lineSegments geometry={wireframeGeo}>
-          <lineBasicMaterial
-            color="#4fc3f7"
-            opacity={0.35}
-            transparent
-            depthTest={true}
-          />
+          <lineBasicMaterial color="#4fc3f7" opacity={0.35} transparent depthTest={true} />
         </lineSegments>
       )}
 

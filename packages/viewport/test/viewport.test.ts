@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
-import { createSceneStore, createMeshNode, createLightNode, createCameraNode } from '@blender-elt/scene-core';
+import {
+  createSceneStore,
+  createMeshNode,
+  createLightNode,
+  createCameraNode,
+} from '@blender-elt/scene-core';
 import { CommandManager } from '@blender-elt/commands';
 import {
   DEFAULT_GRID_CONFIG,

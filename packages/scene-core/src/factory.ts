@@ -62,7 +62,9 @@ export function createLightNode(params: {
 }): LightNode {
   return {
     id: params.id || uniqueId('light'),
-    name: params.name || `${params.lightType.charAt(0).toUpperCase() + params.lightType.slice(1)} Light`,
+    name:
+      params.name ||
+      `${params.lightType.charAt(0).toUpperCase() + params.lightType.slice(1)} Light`,
     type: 'light',
     lightType: params.lightType,
     color: params.color || '#ffffff',

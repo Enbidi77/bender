@@ -1,11 +1,5 @@
 import * as THREE from 'three';
-import type {
-  Transform,
-  Vector3,
-  Euler,
-  Quaternion,
-  SceneNode,
-} from '@blender-elt/contracts';
+import type { Transform, Vector3, Euler, Quaternion, SceneNode } from '@blender-elt/contracts';
 
 export type { Vector3, Euler, Quaternion, Transform };
 
@@ -18,12 +12,7 @@ export function createDefaultTransform(): Transform {
 }
 
 export function eulerToQuaternion(euler: Euler): Quaternion {
-  const threeEuler = new THREE.Euler(
-    euler.x,
-    euler.y,
-    euler.z,
-    euler.order || 'XYZ',
-  );
+  const threeEuler = new THREE.Euler(euler.x, euler.y, euler.z, euler.order || 'XYZ');
   const q = new THREE.Quaternion().setFromEuler(threeEuler);
   return { x: q.x, y: q.y, z: q.z, w: q.w };
 }
@@ -35,11 +24,7 @@ export function quaternionToEuler(q: Quaternion, order: Euler['order'] = 'XYZ'):
 }
 
 export function composeMatrix(transform: Transform): THREE.Matrix4 {
-  const pos = new THREE.Vector3(
-    transform.position.x,
-    transform.position.y,
-    transform.position.z,
-  );
+  const pos = new THREE.Vector3(transform.position.x, transform.position.y, transform.position.z);
   const euler = new THREE.Euler(
     transform.rotation.x,
     transform.rotation.y,
@@ -47,11 +32,7 @@ export function composeMatrix(transform: Transform): THREE.Matrix4 {
     transform.rotation.order || 'XYZ',
   );
   const rot = new THREE.Quaternion().setFromEuler(euler);
-  const scale = new THREE.Vector3(
-    transform.scale.x,
-    transform.scale.y,
-    transform.scale.z,
-  );
+  const scale = new THREE.Vector3(transform.scale.x, transform.scale.y, transform.scale.z);
 
   return new THREE.Matrix4().compose(pos, rot, scale);
 }
@@ -90,10 +71,7 @@ export function computeWorldMatrix(
   return localMatrix;
 }
 
-export function computeWorldTransform(
-  nodeId: string,
-  nodes: Record<string, SceneNode>,
-): Transform {
+export function computeWorldTransform(nodeId: string, nodes: Record<string, SceneNode>): Transform {
   const worldMatrix = computeWorldMatrix(nodeId, nodes);
   const node = nodes[nodeId];
   const order = node?.transform.rotation.order || 'XYZ';

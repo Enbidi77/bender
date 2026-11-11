@@ -77,7 +77,12 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
   ];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Blender-ELT Keyboard Shortcuts" width="max-w-xl">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Blender-ELT Keyboard Shortcuts"
+      width="max-w-xl"
+    >
       <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
         {categories.map((cat) => (
           <div key={cat.title} className="space-y-1.5">

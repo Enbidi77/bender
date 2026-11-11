@@ -45,9 +45,9 @@ export function useCameraControls() {
         const state = sceneStore.getState();
         const nodes = Object.values(state.nodes);
         const cameraNode =
-          (state.activeNodeId && state.nodes[state.activeNodeId]?.type === 'camera'
+          state.activeNodeId && state.nodes[state.activeNodeId]?.type === 'camera'
             ? state.nodes[state.activeNodeId]
-            : nodes.find((n) => n.type === 'camera'));
+            : nodes.find((n) => n.type === 'camera');
 
         if (cameraNode) {
           const pos = cameraNode.transform.position;

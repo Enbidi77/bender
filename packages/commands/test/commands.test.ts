@@ -144,7 +144,9 @@ describe('packages/commands', () => {
       });
 
       await manager.undo(context);
-      expect(store.getState().getNodeById('cube-default')?.transform.position).toEqual(oldT.position);
+      expect(store.getState().getNodeById('cube-default')?.transform.position).toEqual(
+        oldT.position,
+      );
     });
 
     it('DuplicateObjectCommand clones node with offset and undoes cleanly', async () => {
@@ -185,7 +187,9 @@ describe('packages/commands', () => {
       const cmd = new AssignMaterialCommand('cube-default', 'mat-gold-preset');
 
       await manager.execute(cmd, context);
-      expect((store.getState().getNodeById('cube-default') as any).materialId).toBe('mat-gold-preset');
+      expect((store.getState().getNodeById('cube-default') as any).materialId).toBe(
+        'mat-gold-preset',
+      );
 
       await manager.undo(context);
       expect((store.getState().getNodeById('cube-default') as any).materialId).toBe(initialMatId);

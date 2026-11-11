@@ -8,7 +8,8 @@ export interface LightObjectProps {
 }
 
 export const LightObject: React.FC<LightObjectProps> = ({ node }) => {
-  const { sceneObjectsRef, hoveredNodeId, setHoveredNodeId, handleNodeSelect } = useViewportContext();
+  const { sceneObjectsRef, hoveredNodeId, setHoveredNodeId, handleNodeSelect } =
+    useViewportContext();
   const groupRef = useRef<THREE.Group>(null);
 
   // Register with sceneObjectsRef for gizmo and selection
@@ -107,14 +108,10 @@ export const LightObject: React.FC<LightObjectProps> = ({ node }) => {
         />
       )}
 
-      {node.lightType === 'ambient' && (
-        <ambientLight color={color} intensity={intensity} />
-      )}
+      {node.lightType === 'ambient' && <ambientLight color={color} intensity={intensity} />}
 
       {node.lightType === 'hemisphere' && (
-        <hemisphereLight
-          args={[color, node.groundColor ?? '#444444', intensity]}
-        />
+        <hemisphereLight args={[color, node.groundColor ?? '#444444', intensity]} />
       )}
     </group>
   );

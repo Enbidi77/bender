@@ -1,8 +1,4 @@
-import type {
-  ICommand,
-  CommandContext,
-  UndoRedoState,
-} from '@blender-elt/contracts';
+import type { ICommand, CommandContext, UndoRedoState } from '@blender-elt/contracts';
 
 export type CommandEventType = 'execute' | 'undo' | 'redo' | 'change' | 'clear';
 export type CommandEventListener = (state: UndoRedoState, command?: ICommand) => void;

@@ -32,10 +32,7 @@ interface TriangleData {
 /**
  * Collects all world-transformed triangles from a Three.js scene/object
  */
-function collectTriangles(
-  threeObject: THREE.Object3D,
-  upAxis: 'Y' | 'Z' = 'Y'
-): TriangleData[] {
+function collectTriangles(threeObject: THREE.Object3D, upAxis: 'Y' | 'Z' = 'Y'): TriangleData[] {
   const triangles: TriangleData[] = [];
   threeObject.updateMatrixWorld(true);
 
@@ -103,10 +100,7 @@ function collectTriangles(
 /**
  * Exports scene meshes into binary STL format (Uint8Array)
  */
-export function exportBinarySTL(
-  input: ExportInput,
-  options?: ExportOptions
-): Uint8Array {
+export function exportBinarySTL(input: ExportInput, options?: ExportOptions): Uint8Array {
   const threeObject = resolveThreeObject(input);
   const triangles = collectTriangles(threeObject, options?.upAxis || 'Y');
 
@@ -165,10 +159,7 @@ export function exportBinarySTL(
 /**
  * Exports scene meshes into ASCII STL format (string)
  */
-export function exportAsciiSTL(
-  input: ExportInput,
-  options?: ExportOptions
-): string {
+export function exportAsciiSTL(input: ExportInput, options?: ExportOptions): string {
   const threeObject = resolveThreeObject(input);
   const triangles = collectTriangles(threeObject, options?.upAxis || 'Y');
 
@@ -191,10 +182,7 @@ export function exportAsciiSTL(
 /**
  * Exports scene meshes into STL format (binary or ASCII)
  */
-export function exportSTL(
-  input: ExportInput,
-  options?: ExportOptions
-): string | Uint8Array {
+export function exportSTL(input: ExportInput, options?: ExportOptions): string | Uint8Array {
   if (options?.binary) {
     return exportBinarySTL(input, options);
   }
@@ -256,7 +244,7 @@ function parseBinarySTLData(dataView: DataView): IMeshData {
       vertices[vOffset + k * 3 + 2] = dataView.getFloat32(offset + 8, true);
       offset += 12;
 
-      indices[iOffset++] = (vOffset / 3) + k;
+      indices[iOffset++] = vOffset / 3 + k;
     }
 
     vOffset += 9;
@@ -315,9 +303,7 @@ function parseAsciiSTLString(text: string): IMeshData {
 /**
  * Parses binary or ASCII STL into domain IMeshData
  */
-export function parseSTLToMeshData(
-  data: string | ArrayBuffer | Uint8Array
-): IMeshData {
+export function parseSTLToMeshData(data: string | ArrayBuffer | Uint8Array): IMeshData {
   if (typeof data === 'string') {
     return parseAsciiSTLString(data);
   }
@@ -344,7 +330,7 @@ export function parseSTLToMeshData(
  */
 export function importSTL(
   data: string | ArrayBuffer | Uint8Array,
-  options?: ImportOptions
+  options?: ImportOptions,
 ): ImportedSceneResult {
   const meshData = parseSTLToMeshData(data);
   const geoId = 'geo-stl-1';
@@ -355,8 +341,12 @@ export function importSTL(
   if (options?.centerGeometry || options?.normalizeScale) {
     const verts = meshData.vertices as Float32Array;
     if (verts.length > 0) {
-      let minX = Infinity, minY = Infinity, minZ = Infinity;
-      let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+      let minX = Infinity,
+        minY = Infinity,
+        minZ = Infinity;
+      let maxX = -Infinity,
+        maxY = -Infinity,
+        maxZ = -Infinity;
 
       for (let i = 0; i < verts.length; i += 3) {
         minX = Math.min(minX, verts[i]);

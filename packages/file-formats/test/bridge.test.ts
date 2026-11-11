@@ -159,7 +159,7 @@ describe('Bridge & Unified Converters', () => {
     const scene = new THREE.Scene();
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(2, 2, 2),
-      new THREE.MeshStandardMaterial({ color: 0x00ff00 })
+      new THREE.MeshStandardMaterial({ color: 0x00ff00 }),
     );
     mesh.name = 'GreenBox';
     scene.add(mesh);

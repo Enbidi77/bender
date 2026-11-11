@@ -15,7 +15,7 @@ export function ensureNodePolyfills(): void {
 
       constructor(
         type: string,
-        dict?: { lengthComputable?: boolean; loaded?: number; total?: number }
+        dict?: { lengthComputable?: boolean; loaded?: number; total?: number },
       ) {
         super(type);
         this.lengthComputable = dict?.lengthComputable ?? false;
