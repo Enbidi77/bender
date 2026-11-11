@@ -14,11 +14,12 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "test": "echo animation verified",
+    "test": "vitest run",
     "clean": "rimraf dist *.tsbuildinfo"
   },
   "dependencies": {
-    "@blender-elt/contracts": "workspace:*"
+    "@blender-elt/contracts": "workspace:*",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "rimraf": "^6.0.1",

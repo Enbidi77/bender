@@ -7,6 +7,9 @@ import type {
   EdgeData,
   FaceData,
   EditModeSelection,
+  EditElementMode,
+  MeshOperation,
+  MeshOperationType,
 } from '@blender-elt/contracts';
 
 export type {
@@ -17,10 +20,18 @@ export type {
   EdgeData,
   FaceData,
   EditModeSelection,
+  EditElementMode,
+  MeshOperation,
+  MeshOperationType,
 };
 
+export * from './primitives/index.js';
+export * from './topology/index.js';
+
+import { MeshTopology } from './topology/mesh-topology.js';
+
 /**
- * Generates raw IMeshData for a primitive type
+ * Generates raw THREE.BufferGeometry for a primitive type
  */
 export function createPrimitiveGeometry(
   type: PrimitiveType,
@@ -84,44 +95,33 @@ export function createPrimitiveGeometry(
 }
 
 /**
- * Converts Three.js BufferGeometry to serialized IMeshData
- */
-export function bufferGeometryToMeshData(geometry: THREE.BufferGeometry): IMeshData {
-  const positionAttr = geometry.getAttribute('position');
-  const normalAttr = geometry.getAttribute('normal');
-  const uvAttr = geometry.getAttribute('uv');
-  const indexAttr = geometry.getIndex();
-
-  return {
-    vertices: positionAttr ? Array.from(positionAttr.array) : [],
-    normals: normalAttr ? Array.from(normalAttr.array) : undefined,
-    uvs: uvAttr ? Array.from(uvAttr.array) : undefined,
-    indices: indexAttr ? Array.from(indexAttr.array) : undefined,
-  };
-}
-
-/**
  * Converts serialized IMeshData to Three.js BufferGeometry
  */
 export function meshDataToBufferGeometry(data: IMeshData): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
-  const vertices = new Float32Array(data.vertices);
+  const vertices =
+    data.vertices instanceof Float32Array ? data.vertices : new Float32Array(data.vertices);
   geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
 
   if (data.normals && data.normals.length > 0) {
-    const normals = new Float32Array(data.normals);
+    const normals =
+      data.normals instanceof Float32Array ? data.normals : new Float32Array(data.normals);
     geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
   } else {
     geometry.computeVertexNormals();
   }
 
   if (data.uvs && data.uvs.length > 0) {
-    const uvs = new Float32Array(data.uvs);
+    const uvs = data.uvs instanceof Float32Array ? data.uvs : new Float32Array(data.uvs);
     geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   }
 
   if (data.indices && data.indices.length > 0) {
-    geometry.setIndex(Array.from(data.indices));
+    if (data.indices instanceof Uint16Array || data.indices instanceof Uint32Array) {
+      geometry.setIndex(new THREE.BufferAttribute(data.indices, 1));
+    } else {
+      geometry.setIndex(Array.from(data.indices));
+    }
   }
 
   return geometry;
@@ -135,54 +135,10 @@ export function extractTopology(data: IMeshData): {
   edges: EdgeData[];
   faces: FaceData[];
 } {
-  const vertices: VertexData[] = [];
-  const coords = data.vertices;
-  const numVertices = Math.floor(coords.length / 3);
-
-  for (let i = 0; i < numVertices; i++) {
-    vertices.push({
-      index: i,
-      position: {
-        x: coords[i * 3],
-        y: coords[i * 3 + 1],
-        z: coords[i * 3 + 2],
-      },
-    });
-  }
-
-  const faces: FaceData[] = [];
-  const edgesMap = new Map<string, EdgeData>();
-  let edgeIndex = 0;
-
-  const addEdge = (v1: number, v2: number): number => {
-    const key = v1 < v2 ? `${v1}-${v2}` : `${v2}-${v1}`;
-    if (!edgesMap.has(key)) {
-      edgesMap.set(key, { index: edgeIndex++, v1, v2 });
-    }
-    return edgesMap.get(key)!.index;
-  };
-
-  if (data.indices && data.indices.length >= 3) {
-    const indices = Array.from(data.indices);
-    for (let i = 0; i < indices.length; i += 3) {
-      const v0 = indices[i];
-      const v1 = indices[i + 1];
-      const v2 = indices[i + 2];
-      const e0 = addEdge(v0, v1);
-      const e1 = addEdge(v1, v2);
-      const e2 = addEdge(v2, v0);
-
-      faces.push({
-        index: faces.length,
-        vertexIndices: [v0, v1, v2],
-        edgeIndices: [e0, e1, e2],
-      });
-    }
-  }
-
+  const topology = MeshTopology.fromMeshData(data);
   return {
-    vertices,
-    edges: Array.from(edgesMap.values()),
-    faces,
+    vertices: topology.vertices,
+    edges: topology.edges,
+    faces: topology.faces,
   };
 }
