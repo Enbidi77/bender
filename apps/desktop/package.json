@@ -1,0 +1,53 @@
+{
+  "name": "@blender-elt/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "lint": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "test": "echo desktop verified",
+    "preview": "electron-vite preview",
+    "package": "electron-vite build",
+    "clean": "rimraf out dist *.tsbuildinfo",
+    "test:e2e": "echo \"Scaffolded e2e test\""
+  },
+  "dependencies": {
+    "@blender-elt/animation": "workspace:*",
+    "@blender-elt/commands": "workspace:*",
+    "@blender-elt/contracts": "workspace:*",
+    "@blender-elt/file-formats": "workspace:*",
+    "@blender-elt/materials": "workspace:*",
+    "@blender-elt/modeling": "workspace:*",
+    "@blender-elt/persistence": "workspace:*",
+    "@blender-elt/scene-core": "workspace:*",
+    "@blender-elt/ui": "workspace:*",
+    "@blender-elt/viewport": "workspace:*",
+    "@react-three/drei": "^9.120.4",
+    "@react-three/fiber": "^8.17.10",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.469.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^2.6.0",
+    "three": "^0.170.0",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@types/three": "^0.170.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "electron": "^33.2.1",
+    "electron-vite": "^2.3.0",
+    "postcss": "^8.4.49",
+    "rimraf": "^6.0.1",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  }
+}

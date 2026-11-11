@@ -1,0 +1,100 @@
+/**
+ * 3D math and vector contracts
+ */
+export interface Vector3 {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface Euler {
+  x: number;
+  y: number;
+  z: number;
+  order?: 'XYZ' | 'XZY' | 'YXZ' | 'YZX' | 'ZXY' | 'ZYX';
+}
+
+export interface Quaternion {
+  x: number;
+  y: number;
+  z: number;
+  w: number;
+}
+
+export interface Transform {
+  position: Vector3;
+  rotation: Euler;
+  scale: Vector3;
+}
+
+/**
+ * Scene Graph Node Definitions
+ */
+export type NodeType = 'mesh' | 'camera' | 'light' | 'group' | 'root';
+
+export interface BaseSceneNode {
+  id: string;
+  name: string;
+  type: NodeType;
+  transform: Transform;
+  visible: boolean;
+  locked: boolean;
+  parentId: string | null;
+  childrenIds: string[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface MeshNode extends BaseSceneNode {
+  type: 'mesh';
+  geometryId: string;
+  primitiveType?: string;
+  materialId?: string;
+  castShadow?: boolean;
+  receiveShadow?: boolean;
+}
+
+export type CameraProjection = 'perspective' | 'orthographic';
+
+export interface CameraNode extends BaseSceneNode {
+  type: 'camera';
+  projection: CameraProjection;
+  fov: number;
+  near: number;
+  far: number;
+  zoom: number;
+  aspect?: number;
+}
+
+export type LightType = 'directional' | 'point' | 'spot' | 'ambient' | 'hemisphere';
+
+export interface LightNode extends BaseSceneNode {
+  type: 'light';
+  lightType: LightType;
+  color: string;
+  intensity: number;
+  distance?: number;
+  decay?: number;
+  castShadow?: boolean;
+  groundColor?: string;
+  angle?: number;
+  penumbra?: number;
+}
+
+export interface GroupNode extends BaseSceneNode {
+  type: 'group';
+}
+
+export interface SceneRoot {
+  id: string;
+  name: string;
+  type: 'root';
+  childrenIds: string[];
+  environment?: {
+    preset?: string;
+    backgroundBlur?: number;
+    backgroundIntensity?: number;
+  };
+  backgroundColor?: string;
+}
+
+export type SceneNode = MeshNode | CameraNode | LightNode | GroupNode;
