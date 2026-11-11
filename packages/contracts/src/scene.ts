@@ -30,7 +30,7 @@ export interface Transform {
 /**
  * Scene Graph Node Definitions
  */
-export type NodeType = 'mesh' | 'camera' | 'light' | 'group' | 'root';
+export type NodeType = 'mesh' | 'camera' | 'light' | 'group' | 'collection' | 'root';
 
 export interface BaseSceneNode {
   id: string;
@@ -41,7 +41,22 @@ export interface BaseSceneNode {
   locked: boolean;
   parentId: string | null;
   childrenIds: string[];
+  collectionId?: string | null;
   metadata?: Record<string, unknown>;
+}
+
+export interface CollectionNode extends BaseSceneNode {
+  type: 'collection';
+  color?: string;
+}
+
+export interface SceneCollection {
+  id: string;
+  name: string;
+  visible: boolean;
+  locked: boolean;
+  color?: string;
+  nodeIds: string[];
 }
 
 export interface MeshNode extends BaseSceneNode {
@@ -97,4 +112,4 @@ export interface SceneRoot {
   backgroundColor?: string;
 }
 
-export type SceneNode = MeshNode | CameraNode | LightNode | GroupNode;
+export type SceneNode = MeshNode | CameraNode | LightNode | GroupNode | CollectionNode;

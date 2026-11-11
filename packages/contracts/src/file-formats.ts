@@ -1,4 +1,4 @@
-import type { SceneNode, SceneRoot } from './scene.js';
+import type { SceneNode, SceneRoot, SceneCollection } from './scene.js';
 import type { MaterialDefinition } from './materials.js';
 import type { AnimationTimeline } from './animation.js';
 import type { ViewportConfig } from './viewport.js';
@@ -60,6 +60,7 @@ export interface ProjectDocument {
   nodes: Record<string, SceneNode>;
   geometries: Record<string, IMeshData>;
   materials: Record<string, MaterialDefinition>;
+  collections?: Record<string, SceneCollection>;
   timeline?: AnimationTimeline;
   viewport?: ViewportConfig;
 }

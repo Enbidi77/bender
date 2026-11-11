@@ -14,7 +14,7 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "test": "echo scene-core verified",
+    "test": "vitest run",
     "clean": "rimraf dist *.tsbuildinfo"
   },
   "dependencies": {

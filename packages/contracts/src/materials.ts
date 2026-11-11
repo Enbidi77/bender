@@ -28,6 +28,7 @@ export interface PBRMaterialConfig {
   opacity: number;
   transparent: boolean;
   wireframe: boolean;
+  doubleSided?: boolean;
   clearcoat?: number;
   clearcoatRoughness?: number;
   transmission?: number;
@@ -45,14 +46,18 @@ export interface PBRMaterialConfig {
  */
 export type MaterialPreset =
   | 'default-clay'
+  | 'default-gray'
   | 'matte-clay'
   | 'glossy-plastic'
   | 'brushed-metal'
   | 'glass'
   | 'gold'
   | 'chrome'
+  | 'pure-chrome'
   | 'rough-wood'
   | 'rubber'
+  | 'soft-rubber'
+  | 'emissive-neon'
   | 'copper'
   | 'car-paint';
 
