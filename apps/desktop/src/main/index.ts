@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, shell, BrowserWindow, ipcMain, dialog, Menu, session } from 'electron';
 import { join } from 'path';
 import { promises as fs } from 'fs';
 import type {
@@ -11,14 +11,211 @@ import type {
 
 let mainWindow: BrowserWindow | null = null;
 
+function createApplicationMenu(): void {
+  const sendAction = (action: string, payload?: unknown) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('menu:action', action, payload);
+    }
+  };
+
+  const isMac = process.platform === 'darwin';
+
+  const template: Electron.MenuItemConstructorOptions[] = [
+    ...(isMac
+      ? [
+          {
+            label: app.name,
+            submenu: [
+              { label: 'About Blender-ELT', click: () => sendAction('help:about') },
+              { type: 'separator' as const },
+              { role: 'services' as const },
+              { type: 'separator' as const },
+              { role: 'hide' as const },
+              { role: 'hideOthers' as const },
+              { role: 'unhide' as const },
+              { type: 'separator' as const },
+              { role: 'quit' as const },
+            ],
+          },
+        ]
+      : []),
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'New Project',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => sendAction('file:new'),
+        },
+        {
+          label: 'Open...',
+          accelerator: 'CmdOrCtrl+O',
+          click: () => sendAction('file:open'),
+        },
+        {
+          label: 'Save',
+          accelerator: 'CmdOrCtrl+S',
+          click: () => sendAction('file:save'),
+        },
+        {
+          label: 'Save As...',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => sendAction('file:save-as'),
+        },
+        { type: 'separator' as const },
+        {
+          label: 'Import',
+          submenu: [
+            { label: 'glTF / GLB (.gltf, .glb)', click: () => sendAction('import:gltf') },
+            { label: 'Wavefront OBJ (.obj)', click: () => sendAction('import:obj') },
+            { label: 'STL (.stl)', click: () => sendAction('import:stl') },
+          ],
+        },
+        {
+          label: 'Export',
+          submenu: [
+            { label: 'glTF 2.0 (.gltf)', click: () => sendAction('export:gltf') },
+            { label: 'glTF Binary (.glb)', click: () => sendAction('export:glb') },
+            { label: 'Wavefront OBJ (.obj)', click: () => sendAction('export:obj') },
+            { label: 'STL (.stl)', click: () => sendAction('export:stl') },
+          ],
+        },
+        { type: 'separator' as const },
+        {
+          label: 'Preferences...',
+          accelerator: 'CmdOrCtrl+,',
+          click: () => sendAction('app:preferences'),
+        },
+        { type: 'separator' as const },
+        isMac ? { role: 'close' as const } : { role: 'quit' as const },
+      ],
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        {
+          label: 'Undo',
+          accelerator: 'CmdOrCtrl+Z',
+          click: () => sendAction('edit:undo'),
+        },
+        {
+          label: 'Redo',
+          accelerator: isMac ? 'Shift+CmdOrCtrl+Z' : 'CmdOrCtrl+Y',
+          click: () => sendAction('edit:redo'),
+        },
+        { type: 'separator' as const },
+        { role: 'cut' as const },
+        { role: 'copy' as const },
+        { role: 'paste' as const },
+        { role: 'selectAll' as const },
+      ],
+    },
+    {
+      label: 'Add',
+      submenu: [
+        {
+          label: 'Mesh',
+          submenu: [
+            { label: 'Cube', click: () => sendAction('add:mesh:cube') },
+            { label: 'Sphere', click: () => sendAction('add:mesh:sphere') },
+            { label: 'Cylinder', click: () => sendAction('add:mesh:cylinder') },
+            { label: 'Cone', click: () => sendAction('add:mesh:cone') },
+            { label: 'Plane', click: () => sendAction('add:mesh:plane') },
+            { label: 'Torus', click: () => sendAction('add:mesh:torus') },
+          ],
+        },
+        {
+          label: 'Light',
+          submenu: [
+            { label: 'Point Light', click: () => sendAction('add:light:point') },
+            { label: 'Directional Light', click: () => sendAction('add:light:directional') },
+            { label: 'Spot Light', click: () => sendAction('add:light:spot') },
+          ],
+        },
+        { label: 'Camera', click: () => sendAction('add:camera') },
+      ],
+    },
+    {
+      label: 'View',
+      submenu: [
+        { label: 'Front View', accelerator: 'Numpad1', click: () => sendAction('view:front') },
+        { label: 'Right View', accelerator: 'Numpad3', click: () => sendAction('view:right') },
+        { label: 'Top View', accelerator: 'Numpad7', click: () => sendAction('view:top') },
+        { label: 'Active Camera', accelerator: 'Numpad0', click: () => sendAction('view:camera') },
+        {
+          label: 'Toggle Persp/Ortho',
+          accelerator: 'Numpad5',
+          click: () => sendAction('view:persp-ortho'),
+        },
+        { type: 'separator' as const },
+        {
+          label: 'Frame Selected',
+          accelerator: 'F',
+          click: () => sendAction('view:focus'),
+        },
+        { label: 'Toggle Grid', click: () => sendAction('view:toggle-grid') },
+        { label: 'Toggle Wireframe', click: () => sendAction('view:toggle-wireframe') },
+        { type: 'separator' as const },
+        { role: 'reload' as const },
+        { role: 'forceReload' as const },
+        { role: 'toggleDevTools' as const },
+      ],
+    },
+    {
+      label: 'Window',
+      submenu: [
+        { role: 'minimize' as const },
+        { role: 'zoom' as const },
+        ...(isMac
+          ? [
+              { type: 'separator' as const },
+              { role: 'front' as const },
+              { type: 'separator' as const },
+              { role: 'window' as const },
+            ]
+          : [{ role: 'close' as const }]),
+      ],
+    },
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: 'Keyboard Shortcuts',
+          accelerator: 'CmdOrCtrl+/',
+          click: () => sendAction('help:shortcuts'),
+        },
+        {
+          label: 'About Blender-ELT',
+          click: () => sendAction('help:about'),
+        },
+      ],
+    },
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
+
 function createWindow(): void {
+  // Set up CSP header for security
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self' 'unsafe-inline' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' data: blob:;",
+        ],
+      },
+    });
+  });
+
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
     minWidth: 1024,
     minHeight: 700,
     show: false,
-    autoHideMenuBar: true,
+    autoHideMenuBar: false,
     backgroundColor: '#1d1e22',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -27,6 +224,8 @@ function createWindow(): void {
       nodeIntegration: false,
     },
   });
+
+  createApplicationMenu();
 
   mainWindow.on('ready-to-show', () => {
     mainWindow?.show();

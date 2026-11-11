@@ -26,6 +26,12 @@ export default defineConfig({
   renderer: {
     root: resolve(__dirname, 'src/renderer'),
     plugins: [react()],
+    resolve: {
+      alias: {
+        fs: resolve(__dirname, 'src/renderer/src/shims/node-shims.ts'),
+        path: resolve(__dirname, 'src/renderer/src/shims/node-shims.ts'),
+      },
+    },
     build: {
       rollupOptions: {
         input: {

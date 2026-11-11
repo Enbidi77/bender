@@ -33,4 +33,5 @@ const api: DesktopBridgeAPI = {
   },
 };
 
+contextBridge.exposeInMainWorld('electronAPI', api);
 contextBridge.exposeInMainWorld('electronBridge', api);
