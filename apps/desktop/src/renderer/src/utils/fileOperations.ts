@@ -70,7 +70,13 @@ function buildProjectDocument(state: SceneGraphState): ProjectDocument {
       const mesh = n as MeshNode;
       const prim = (mesh.primitiveType || 'cube') as PrimitiveType;
       const geo = createPrimitiveGeometry(prim);
-      geometries[mesh.geometryId || mesh.id] = bufferGeometryToMeshData(geo);
+      const rawMesh = bufferGeometryToMeshData(geo);
+      geometries[mesh.geometryId || mesh.id] = {
+        vertices: Array.from(rawMesh.vertices as any),
+        normals: rawMesh.normals ? Array.from(rawMesh.normals as any) : undefined,
+        uvs: rawMesh.uvs ? Array.from(rawMesh.uvs as any) : undefined,
+        indices: rawMesh.indices ? Array.from(rawMesh.indices as any) : undefined,
+      };
     }
   });
 

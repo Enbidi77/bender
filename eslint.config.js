@@ -20,6 +20,13 @@ export default [
     },
   },
   {
-    ignores: ['**/node_modules/**', '**/dist/**', '**/out/**', '**/.turbo/**', '**/build/**'],
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/out/**',
+      '**/.turbo/**',
+      '**/build/**',
+      '**/.next/**',
+    ],
   },
 ];
