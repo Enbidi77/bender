@@ -119,6 +119,17 @@ export const ViewportProvider: React.FC<ViewportProviderProps> = ({
 
   const [activeViewpoint, setActiveViewpoint] = useState<StandardViewpoint>('perspective');
   const [isGizmoDragging, setIsGizmoDragging] = useState<boolean>(false);
+  const [isSculptStrokeActive, setIsSculptStrokeActive] = useState<boolean>(false);
+  const [isSculptModalActive, setIsSculptModalActiveState] = useState<boolean>(false);
+  const [sculptModalMode, setSculptModalMode] = useState<'radius' | 'strength' | null>(null);
+
+  const setIsSculptModalActive = useCallback(
+    (active: boolean, mode: 'radius' | 'strength' | null = null) => {
+      setIsSculptModalActiveState(active);
+      setSculptModalMode(active ? mode : null);
+    },
+    [],
+  );
   const [axisLock, setAxisLockState] = useState<AxisLock>(initialAxisLock ?? null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [statsVisible, setShowStats] = useState<boolean>(showStats);
@@ -360,6 +371,9 @@ export const ViewportProvider: React.FC<ViewportProviderProps> = ({
       cameraProjection,
       activeViewpoint,
       isGizmoDragging,
+      isSculptStrokeActive,
+      isSculptModalActive,
+      sculptModalMode,
       axisLock,
       hoveredNodeId,
       showStats: statsVisible,
@@ -379,6 +393,8 @@ export const ViewportProvider: React.FC<ViewportProviderProps> = ({
       toggleCameraProjection,
       setActiveViewpoint,
       setIsGizmoDragging,
+      setIsSculptStrokeActive,
+      setIsSculptModalActive,
       setAxisLock,
       toggleAxisLock,
       setHoveredNodeId,
@@ -405,6 +421,9 @@ export const ViewportProvider: React.FC<ViewportProviderProps> = ({
       cameraProjection,
       activeViewpoint,
       isGizmoDragging,
+      isSculptStrokeActive,
+      isSculptModalActive,
+      sculptModalMode,
       axisLock,
       hoveredNodeId,
       statsVisible,
@@ -423,6 +442,8 @@ export const ViewportProvider: React.FC<ViewportProviderProps> = ({
       toggleCameraProjection,
       setActiveViewpoint,
       setIsGizmoDragging,
+      setIsSculptStrokeActive,
+      setIsSculptModalActive,
       setAxisLock,
       toggleAxisLock,
       setHoveredNodeId,

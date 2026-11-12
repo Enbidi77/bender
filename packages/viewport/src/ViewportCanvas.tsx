@@ -12,6 +12,7 @@ import { Cursor3DOverlay } from './overlays/Cursor3D.js';
 import { SceneRenderer } from './renderer/SceneRenderer.js';
 import { SelectionHighlight } from './gizmos/SelectionHighlight.js';
 import { TransformGizmo } from './gizmos/TransformGizmo.js';
+import { SculptViewportLayer } from './sculpt/SculptViewportLayer.js';
 
 export const ViewportCanvas: React.FC = () => {
   const { config, sceneStore } = useViewportContext();
@@ -57,6 +58,9 @@ export const ViewportCanvas: React.FC = () => {
       {/* Selection outline and transform gizmo */}
       <SelectionHighlight />
       <TransformGizmo />
+
+      {/* Sculpt mode interactive input controller and 3D surface brush cursor */}
+      <SculptViewportLayer />
     </Canvas>
   );
 };

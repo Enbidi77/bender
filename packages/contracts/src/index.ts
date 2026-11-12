@@ -11,3 +11,4 @@ export * from './viewport.js';
 export * from './animation.js';
 export * from './file-formats.js';
 export * from './desktop-ipc.js';
+export * from './sculpting.js';

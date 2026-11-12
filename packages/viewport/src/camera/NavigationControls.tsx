@@ -3,7 +3,8 @@ import { OrbitControls } from '@react-three/drei';
 import { useViewportContext, type OrbitControlsInstance } from '../context/ViewportContext.js';
 
 export const NavigationControls: React.FC = () => {
-  const { orbitControlsRef, isGizmoDragging } = useViewportContext();
+  const { orbitControlsRef, isGizmoDragging, isSculptStrokeActive, isSculptModalActive } =
+    useViewportContext();
   const controlsRef = useRef<OrbitControlsInstance | null>(null);
 
   useEffect(() => {
@@ -15,11 +16,15 @@ export const NavigationControls: React.FC = () => {
     };
   }, [orbitControlsRef]);
 
+  // Suppress OrbitControls while transform gizmo is dragged, an active sculpt stroke is in progress,
+  // or interactive modal radius/strength hotkey adjustment is active.
+  const isNavigationEnabled = !isGizmoDragging && !isSculptStrokeActive && !isSculptModalActive;
+
   return (
     <OrbitControls
       ref={controlsRef}
       makeDefault
-      enabled={!isGizmoDragging}
+      enabled={isNavigationEnabled}
       enableDamping
       dampingFactor={0.08}
       screenSpacePanning

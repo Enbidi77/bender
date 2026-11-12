@@ -22,6 +22,7 @@ export * from './renderer/NodeRenderer.js';
 export * from './renderer/SceneRenderer.js';
 export * from './gizmos/TransformGizmo.js';
 export * from './gizmos/SelectionHighlight.js';
+export * from './sculpt/index.js';
 export * from './ui/ViewportToolbar.js';
 export * from './ui/ViewportInfoOverlay.js';
 export * from './ViewportCanvas.js';

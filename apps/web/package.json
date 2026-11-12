@@ -21,6 +21,7 @@
     "@blender-elt/modeling": "workspace:*",
     "@blender-elt/persistence": "workspace:*",
     "@blender-elt/scene-core": "workspace:*",
+    "@blender-elt/sculpting": "workspace:*",
     "@blender-elt/ui": "workspace:*",
     "@blender-elt/viewport": "workspace:*",
     "@react-three/drei": "^9.120.4",

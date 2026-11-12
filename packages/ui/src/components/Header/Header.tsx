@@ -3,7 +3,14 @@ import { Undo2, Redo2, Sun, Moon, Search, Minus, Square, X } from 'lucide-react'
 import { MenuBar, type MenuCategory } from './MenuBar.js';
 import { useTheme } from '../../theme/ThemeContext.js';
 import { cn } from '../common/Button.js';
-import type { ViewportMode, WorkspaceDefinition } from '@blender-elt/contracts';
+import type {
+  ViewportMode,
+  WorkspaceDefinition,
+  SculptBrushType,
+  SculptBrushConfig,
+  SymmetryConfig,
+} from '@blender-elt/contracts';
+import { SculptTopBar } from '../Sculpt/SculptTopBar.js';
 
 export interface HeaderProps {
   projectName?: string;
@@ -21,6 +28,13 @@ export interface HeaderProps {
   onSelectWorkspace?: (workspaceId: string) => void;
   headerPrefix?: React.ReactNode;
   headerSuffix?: React.ReactNode;
+  activeSculptBrush?: SculptBrushType;
+  sculptBrushConfig?: SculptBrushConfig;
+  onUpdateSculptBrushConfig?: (updates: Partial<SculptBrushConfig>) => void;
+  onSelectSculptBrush?: (brush: SculptBrushType) => void;
+  sculptSymmetry?: SymmetryConfig;
+  onUpdateSculptSymmetry?: (updates: Partial<SymmetryConfig>) => void;
+  sculptTopBar?: React.ReactNode;
   onOpenCommandPalette?: () => void;
   onMinimize?: () => void;
   onMaximize?: () => void;
@@ -44,6 +58,13 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectWorkspace,
   headerPrefix,
   headerSuffix,
+  activeSculptBrush,
+  sculptBrushConfig,
+  onUpdateSculptBrushConfig,
+  onSelectSculptBrush,
+  sculptSymmetry,
+  onUpdateSculptSymmetry,
+  sculptTopBar,
   onOpenCommandPalette,
   onMinimize,
   onMaximize,
@@ -92,6 +113,29 @@ export const Header: React.FC<HeaderProps> = ({
                 Sculpt Mode
               </option>
             </select>
+          </div>
+        )}
+
+        {/* Sculpt Mode Top-Bar Tool Controls */}
+        {(viewportMode === 'sculpt' || activeWorkspaceId === 'sculpting') && (
+          <div className="hidden md:flex items-center ml-1 border-l border-[#3a3a3a] pl-2">
+            {sculptTopBar
+              ? sculptTopBar
+              : activeSculptBrush &&
+                sculptBrushConfig &&
+                onUpdateSculptBrushConfig &&
+                onSelectSculptBrush &&
+                sculptSymmetry &&
+                onUpdateSculptSymmetry && (
+                  <SculptTopBar
+                    activeBrush={activeSculptBrush}
+                    brushConfig={sculptBrushConfig}
+                    onUpdateBrushConfig={onUpdateSculptBrushConfig}
+                    onSelectBrush={onSelectSculptBrush}
+                    symmetry={sculptSymmetry}
+                    onUpdateSymmetry={onUpdateSculptSymmetry}
+                  />
+                )}
           </div>
         )}
 

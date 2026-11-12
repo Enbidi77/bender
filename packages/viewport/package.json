@@ -23,6 +23,7 @@
     "@blender-elt/materials": "workspace:*",
     "@blender-elt/modeling": "workspace:*",
     "@blender-elt/scene-core": "workspace:*",
+    "@blender-elt/sculpting": "workspace:*",
     "@react-three/drei": "^9.120.4",
     "@react-three/fiber": "^8.17.10",
     "lucide-react": "^0.469.0",

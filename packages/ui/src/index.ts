@@ -41,3 +41,6 @@ export * from './components/EditorStudio/EditorStudio.js';
 export * from './components/EditorStudio/workspaces.js';
 export * from './components/EditorStudio/projectDocument.js';
 export * from './components/EditorStudio/platformBridges.js';
+
+// Sculpt Mode UI
+export * from './components/Sculpt/index.js';

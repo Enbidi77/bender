@@ -72,6 +72,9 @@ export interface ViewportState {
   showOverlays: boolean;
   show3DCursor: boolean;
   activeCameraId: string | null;
+  isSculptStrokeActive: boolean;
+  isSculptModalActive: boolean;
+  sculptModalMode: 'radius' | 'strength' | null;
 
   // Actions
   setConfig: (config: Partial<ViewportConfig>) => void;
@@ -85,6 +88,8 @@ export interface ViewportState {
   toggleCameraProjection: () => void;
   setActiveViewpoint: (viewpoint: StandardViewpoint) => void;
   setIsGizmoDragging: (dragging: boolean) => void;
+  setIsSculptStrokeActive: (active: boolean) => void;
+  setIsSculptModalActive: (active: boolean, mode?: 'radius' | 'strength' | null) => void;
   setAxisLock: (axis: AxisLock) => void;
   toggleAxisLock: (axis: 'X' | 'Y' | 'Z') => void;
   setHoveredNodeId: (id: string | null) => void;

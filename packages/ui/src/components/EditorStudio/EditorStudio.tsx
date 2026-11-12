@@ -23,6 +23,12 @@ import type {
   IPlatformBridge,
   WorkspaceDefinition,
   EditorSessionState,
+  SculptBrushType,
+  SculptBrushConfig,
+  SculptStrokeSettings,
+  SymmetryConfig,
+  SculptMaskOperation,
+  VoxelRemeshConfig,
 } from '@blender-elt/contracts';
 import {
   createSceneStore,
@@ -60,6 +66,7 @@ import { PreferencesModal } from '../Modals/PreferencesModal.js';
 
 import { DEFAULT_WORKSPACES } from './workspaces.js';
 import { buildProjectDocument, calculateScenePolycounts } from './projectDocument.js';
+import { SculptToolbar, SculptStatusBar, SCULPT_BRUSH_DEFINITIONS } from '../Sculpt/index.js';
 
 export interface EditorStudioProps {
   /**
@@ -205,6 +212,110 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
     },
     [],
   );
+
+  // Sculpt Mode States
+  const isSculptMode = viewportMode === 'sculpt' || activeWorkspaceId === 'sculpting';
+  const [activeSculptBrush, setActiveSculptBrush] = useState<SculptBrushType>('draw');
+  const [brushConfigs, setBrushConfigs] = useState<Record<SculptBrushType, SculptBrushConfig>>(
+    () => {
+      const map: Partial<Record<SculptBrushType, SculptBrushConfig>> = {};
+      for (const b of SCULPT_BRUSH_DEFINITIONS) {
+        map[b.id] = {
+          type: b.id,
+          radius: b.defaultRadius,
+          strength: b.defaultStrength,
+          falloff: b.defaultFalloff,
+          spacing: 10,
+          direction: 'add',
+          useStylusPressure: true,
+          pressureAffectsSize: true,
+          pressureAffectsStrength: true,
+        };
+      }
+      return map as Record<SculptBrushType, SculptBrushConfig>;
+    },
+  );
+
+  const [sculptStrokeSettings, setSculptStrokeSettings] = useState<SculptStrokeSettings>({
+    spacing: 10,
+    smoothStroke: false,
+    smoothStrokeFactor: 0.5,
+    useAccumulate: true,
+    frontFacesOnly: false,
+  });
+
+  const [sculptSymmetry, setSculptSymmetry] = useState<SymmetryConfig>({
+    x: true,
+    y: false,
+    z: false,
+    radial: { axis: 'z', count: 1 },
+  });
+
+  const [maskEnabled, setMaskEnabled] = useState<boolean>(true);
+  const [maskCoveragePercent, setMaskCoveragePercent] = useState<number>(0);
+  const [remeshConfig, setRemeshConfig] = useState<VoxelRemeshConfig>({
+    voxelSize: 0.05,
+    adaptivity: 0,
+    smoothNormals: true,
+    preserveVolume: true,
+  });
+  const [isRemeshing, setIsRemeshing] = useState<boolean>(false);
+  const [lastStrokeDurationMs] = useState<number>(0);
+
+  const activeBrushConfig = brushConfigs[activeSculptBrush] || {
+    type: activeSculptBrush,
+    radius: 50,
+    strength: 0.5,
+    falloff: 'smooth',
+    spacing: 10,
+    direction: 'add',
+  };
+
+  const handleUpdateSculptBrushConfig = useCallback(
+    (updates: Partial<SculptBrushConfig>) => {
+      setBrushConfigs((prev) => ({
+        ...prev,
+        [activeSculptBrush]: {
+          ...prev[activeSculptBrush],
+          ...updates,
+        },
+      }));
+    },
+    [activeSculptBrush],
+  );
+
+  const handleUpdateSculptStrokeSettings = useCallback((updates: Partial<SculptStrokeSettings>) => {
+    setSculptStrokeSettings((prev) => ({ ...prev, ...updates }));
+  }, []);
+
+  const handleUpdateSculptSymmetry = useCallback((updates: Partial<SymmetryConfig>) => {
+    setSculptSymmetry((prev) => ({ ...prev, ...updates }));
+  }, []);
+
+  const handleUpdateRemeshConfig = useCallback((updates: Partial<VoxelRemeshConfig>) => {
+    setRemeshConfig((prev) => ({ ...prev, ...updates }));
+  }, []);
+
+  const handleMaskOperation = useCallback((operation: SculptMaskOperation) => {
+    if (operation === 'clear') {
+      setMaskCoveragePercent(0);
+    } else if (operation === 'fill') {
+      setMaskCoveragePercent(100);
+    } else if (operation === 'invert') {
+      setMaskCoveragePercent((prev) => Math.max(0, 100 - prev));
+    }
+    setIsDirty(true);
+  }, []);
+
+  const handleExecuteRemesh = useCallback(async (_cfg: VoxelRemeshConfig) => {
+    setIsRemeshing(true);
+    try {
+      await new Promise((r) => setTimeout(r, 200));
+      setIsDirty(true);
+    } finally {
+      setIsRemeshing(false);
+    }
+  }, []);
 
   // 3. Project File States
   const [projectName, setProjectName] = useState<string>(initialProject?.name || 'Untitled.belt');
@@ -742,6 +853,65 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
         return;
       }
 
+      // Sculpt Mode Specific Hotkeys
+      if (isSculptMode) {
+        if ((e.key === 'i' || e.key === 'I') && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          handleMaskOperation('invert');
+          return;
+        }
+        if ((e.key === 'm' || e.key === 'M') && e.altKey) {
+          e.preventDefault();
+          handleMaskOperation('clear');
+          return;
+        }
+        if ((e.key === 'r' || e.key === 'R') && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          handleExecuteRemesh(remeshConfig);
+          return;
+        }
+
+        // Single key brush switches (when not holding modifier)
+        if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+          if (e.key === 'x' || e.key === 'X') {
+            setActiveSculptBrush('draw');
+            return;
+          }
+          if (e.key === 'c' || e.key === 'C') {
+            setActiveSculptBrush('clay');
+            return;
+          }
+          if (e.key === 'g' || e.key === 'G') {
+            setActiveSculptBrush('grab');
+            return;
+          }
+          if (e.key === 'i' || e.key === 'I') {
+            setActiveSculptBrush('inflate');
+            return;
+          }
+          if (e.key === 'b' || e.key === 'B') {
+            setActiveSculptBrush('blob');
+            return;
+          }
+          if (e.key === 'm' || e.key === 'M') {
+            setActiveSculptBrush('mask');
+            return;
+          }
+          if (e.key === 'p' || e.key === 'P') {
+            setActiveSculptBrush('pinch');
+            return;
+          }
+          if (e.key === 't' || e.key === 'T') {
+            setActiveSculptBrush('flatten');
+            return;
+          }
+          if (e.key === 's' || e.key === 'S') {
+            setActiveSculptBrush('smooth');
+            return;
+          }
+        }
+      }
+
       // Hotkey: G (translate)
       if (e.key === 'g' || e.key === 'G') {
         setGizmoType('translate');
@@ -758,8 +928,8 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
       else if (e.key === 'w' || e.key === 'W') {
         setGizmoType('none');
       }
-      // Hotkey: X or Delete (delete object)
-      else if (e.key === 'x' || e.key === 'X' || e.key === 'Delete') {
+      // Hotkey: X or Delete (delete object - in sculpt mode, only Delete key)
+      else if ((!isSculptMode && (e.key === 'x' || e.key === 'X')) || e.key === 'Delete') {
         handleDeleteSelected();
       }
       // Hotkey: Shift+D (duplicate)
@@ -1165,6 +1335,12 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
             onSelectWorkspace={handleSelectWorkspace}
             headerPrefix={headerPrefix}
             headerSuffix={headerSuffix || renderSaveStatusIndicator()}
+            activeSculptBrush={activeSculptBrush}
+            sculptBrushConfig={activeBrushConfig}
+            onUpdateSculptBrushConfig={handleUpdateSculptBrushConfig}
+            onSelectSculptBrush={setActiveSculptBrush}
+            sculptSymmetry={sculptSymmetry}
+            onUpdateSculptSymmetry={handleUpdateSculptSymmetry}
             onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
             onMinimize={platformBridge.window?.minimize}
             onMaximize={platformBridge.window?.maximize}
@@ -1172,18 +1348,40 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
             className="w-full"
           />
         }
-        toolbar={<></>}
+        toolbar={
+          isSculptMode ? (
+            <SculptToolbar activeBrush={activeSculptBrush} onSelectBrush={setActiveSculptBrush} />
+          ) : (
+            <></>
+          )
+        }
         viewport={
-          <ViewportContainer
-            sceneStore={sceneStore}
-            commandManager={commandManager}
-            config={viewportConfig}
-            showToolbar={true}
-            showOverlays={true}
-            showStats={true}
-            onConfigChange={handleViewportConfigChange}
-            className="w-full h-full"
-          />
+          <div className="relative w-full h-full flex flex-col">
+            <div className="flex-1 relative overflow-hidden">
+              <ViewportContainer
+                sceneStore={sceneStore}
+                commandManager={commandManager}
+                config={viewportConfig}
+                showToolbar={true}
+                showOverlays={true}
+                showStats={true}
+                onConfigChange={handleViewportConfigChange}
+                className="w-full h-full"
+              />
+            </div>
+            {isSculptMode && (
+              <SculptStatusBar
+                activeBrush={activeSculptBrush}
+                brushDirection={activeBrushConfig.direction}
+                vertexCount={totalVertices}
+                faceCount={totalFaces}
+                lastStrokeDurationMs={lastStrokeDurationMs}
+                symmetry={sculptSymmetry}
+                maskEnabled={maskEnabled}
+                maskCoveragePercent={maskCoveragePercent}
+              />
+            )}
+          </div>
         }
         outliner={
           <OutlinerPanel
@@ -1208,6 +1406,22 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
             onApplyMaterialPreset={handleApplyMaterialPreset}
             onUpdateLight={handleUpdateLight}
             onUpdateCamera={handleUpdateCamera}
+            viewportMode={viewportMode}
+            activeSculptBrush={activeSculptBrush}
+            sculptBrushConfig={activeBrushConfig}
+            onUpdateSculptBrushConfig={handleUpdateSculptBrushConfig}
+            sculptStrokeSettings={sculptStrokeSettings}
+            onUpdateSculptStrokeSettings={handleUpdateSculptStrokeSettings}
+            sculptSymmetry={sculptSymmetry}
+            onUpdateSculptSymmetry={handleUpdateSculptSymmetry}
+            onMaskOperation={handleMaskOperation}
+            maskEnabled={maskEnabled}
+            onToggleMaskEnabled={setMaskEnabled}
+            maskCoveragePercent={maskCoveragePercent}
+            remeshConfig={remeshConfig}
+            onUpdateRemeshConfig={handleUpdateRemeshConfig}
+            onExecuteRemesh={handleExecuteRemesh}
+            isRemeshing={isRemeshing}
           />
         }
         timeline={

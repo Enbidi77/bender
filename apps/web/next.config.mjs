@@ -16,6 +16,7 @@ const nextConfig = {
     '@blender-elt/modeling',
     '@blender-elt/persistence',
     '@blender-elt/scene-core',
+    '@blender-elt/sculpting',
     '@blender-elt/ui',
     '@blender-elt/viewport',
     'three',

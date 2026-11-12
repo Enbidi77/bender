@@ -372,6 +372,37 @@ importers:
         specifier: ^5.6.3
         version: 5.9.3
 
+  packages/sculpting:
+    dependencies:
+      '@blender-elt/commands':
+        specifier: workspace:*
+        version: link:../commands
+      '@blender-elt/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@blender-elt/scene-core':
+        specifier: workspace:*
+        version: link:../scene-core
+      three:
+        specifier: ^0.170.0
+        version: 0.170.0
+      zustand:
+        specifier: ^5.0.3
+        version: 5.1.0(@types/react@18.3.31)(react@18.3.1)(use-sync-external-store@1.7.0(react@18.3.1))
+    devDependencies:
+      '@types/three':
+        specifier: ^0.170.0
+        version: 0.170.0
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.1.4
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.5)
+
   packages/ui:
     dependencies:
       '@blender-elt/animation':
@@ -398,6 +429,9 @@ importers:
       '@blender-elt/scene-core':
         specifier: workspace:*
         version: link:../scene-core
+      '@blender-elt/sculpting':
+        specifier: workspace:*
+        version: link:../sculpting
       '@blender-elt/viewport':
         specifier: workspace:*
         version: link:../viewport
@@ -417,6 +451,12 @@ importers:
       '@types/react':
         specifier: ^18.3.18
         version: 18.3.31
+      '@types/react-dom':
+        specifier: ^18.3.5
+        version: 18.3.7(@types/react@18.3.31)
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
       rimraf:
         specifier: ^6.0.1
         version: 6.1.4
@@ -441,6 +481,9 @@ importers:
       '@blender-elt/scene-core':
         specifier: workspace:*
         version: link:../scene-core
+      '@blender-elt/sculpting':
+        specifier: workspace:*
+        version: link:../sculpting
       '@react-three/drei':
         specifier: ^9.120.4
         version: 9.122.0(@react-three/fiber@8.18.0(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(three@0.170.0))(@types/react@18.3.31)(@types/three@0.170.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(three@0.170.0)(use-sync-external-store@1.7.0(react@18.3.1))
