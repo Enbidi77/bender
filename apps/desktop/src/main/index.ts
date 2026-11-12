@@ -138,13 +138,13 @@ function createApplicationMenu(): void {
     {
       label: 'View',
       submenu: [
-        { label: 'Front View', accelerator: 'Numpad1', click: () => sendAction('view:front') },
-        { label: 'Right View', accelerator: 'Numpad3', click: () => sendAction('view:right') },
-        { label: 'Top View', accelerator: 'Numpad7', click: () => sendAction('view:top') },
-        { label: 'Active Camera', accelerator: 'Numpad0', click: () => sendAction('view:camera') },
+        { label: 'Front View', accelerator: 'num1', click: () => sendAction('view:front') },
+        { label: 'Right View', accelerator: 'num3', click: () => sendAction('view:right') },
+        { label: 'Top View', accelerator: 'num7', click: () => sendAction('view:top') },
+        { label: 'Active Camera', accelerator: 'num0', click: () => sendAction('view:camera') },
         {
           label: 'Toggle Persp/Ortho',
-          accelerator: 'Numpad5',
+          accelerator: 'num5',
           click: () => sendAction('view:persp-ortho'),
         },
         { type: 'separator' as const },
