@@ -127,24 +127,69 @@ export const ViewportProvider: React.FC<ViewportProviderProps> = ({
   const [cursorVisible, setShow3DCursor] = useState<boolean>(initialShow3DCursor);
   const [activeCameraId, setActiveCameraId] = useState<string | null>(null);
 
-  const setAxisLock = useCallback(
-    (axis: AxisLock) => {
-      setAxisLockState(axis);
-      onAxisLockChange?.(axis);
-    },
-    [onAxisLockChange],
-  );
+  // Store callbacks in refs to avoid triggering state updates during render passes
+  const onConfigChangeRef = useRef(onConfigChange);
+  useEffect(() => {
+    onConfigChangeRef.current = onConfigChange;
+  }, [onConfigChange]);
 
-  const toggleAxisLock = useCallback(
-    (axis: 'X' | 'Y' | 'Z') => {
-      setAxisLockState((prev) => {
-        const next = prev === axis ? null : axis;
-        onAxisLockChange?.(next);
-        return next;
-      });
-    },
-    [onAxisLockChange],
-  );
+  const onAxisLockChangeRef = useRef(onAxisLockChange);
+  useEffect(() => {
+    onAxisLockChangeRef.current = onAxisLockChange;
+  }, [onAxisLockChange]);
+
+  // Sync external controlled config changes safely via useEffect
+  useEffect(() => {
+    if (!initialConfig) return;
+    setConfigState((prev) => {
+      const mode = initialConfig.mode ?? prev.mode;
+      const gizmoType = initialConfig.gizmoType ?? prev.gizmoType;
+      const shadingMode = initialConfig.shadingMode ?? prev.shadingMode;
+      const transformSpace = initialConfig.transformSpace ?? prev.transformSpace;
+
+      if (
+        mode === prev.mode &&
+        gizmoType === prev.gizmoType &&
+        shadingMode === prev.shadingMode &&
+        transformSpace === prev.transformSpace
+      ) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        ...initialConfig,
+        grid: {
+          ...prev.grid,
+          ...(initialConfig.grid ?? {}),
+        },
+      };
+    });
+  }, [
+    initialConfig?.mode,
+    initialConfig?.gizmoType,
+    initialConfig?.shadingMode,
+    initialConfig?.transformSpace,
+  ]);
+
+  const setAxisLock = useCallback((axis: AxisLock) => {
+    setAxisLockState(axis);
+    if (onAxisLockChangeRef.current) {
+      const cb = onAxisLockChangeRef.current;
+      queueMicrotask(() => cb(axis));
+    }
+  }, []);
+
+  const toggleAxisLock = useCallback((axis: 'X' | 'Y' | 'Z') => {
+    setAxisLockState((prev) => {
+      const next = prev === axis ? null : axis;
+      if (onAxisLockChangeRef.current) {
+        const cb = onAxisLockChangeRef.current;
+        queueMicrotask(() => cb(next));
+      }
+      return next;
+    });
+  }, []);
 
   // 3. Object refs for imperative camera navigation & focus
   const orbitControlsRef = useRef<OrbitControlsInstance | null>(null);
@@ -152,16 +197,16 @@ export const ViewportProvider: React.FC<ViewportProviderProps> = ({
   const sceneObjectsRef = useRef<Map<string, THREE.Object3D>>(new Map());
 
   // 4. Action Dispatchers
-  const setConfig = useCallback(
-    (newConfig: Partial<ViewportConfig>) => {
-      setConfigState((prev) => {
-        const next = { ...prev, ...newConfig };
-        onConfigChange?.(next);
-        return next;
-      });
-    },
-    [onConfigChange],
-  );
+  const setConfig = useCallback((newConfig: Partial<ViewportConfig>) => {
+    setConfigState((prev) => {
+      const next = { ...prev, ...newConfig };
+      if (onConfigChangeRef.current) {
+        const cb = onConfigChangeRef.current;
+        queueMicrotask(() => cb(next));
+      }
+      return next;
+    });
+  }, []);
 
   const setMode = useCallback(
     (mode: ViewportMode) => {

@@ -1,4 +1,11 @@
-import React, { useState, useEffect, useRef, useSyncExternalStore, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useSyncExternalStore,
+  useCallback,
+  useMemo,
+} from 'react';
 import type {
   SceneNode,
   GizmoType,
@@ -173,6 +180,31 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
   const [gizmoType, setGizmoType] = useState<GizmoType>('translate');
   const [shadingMode, setShadingMode] = useState<ShadingMode>('solid');
   const [viewportFps] = useState<number>(60);
+
+  // Memoized Viewport configuration to avoid creating new object references every render
+  const viewportConfig = useMemo(
+    () => ({
+      gizmoType,
+      shadingMode,
+      mode: viewportMode,
+    }),
+    [gizmoType, shadingMode, viewportMode],
+  );
+
+  const handleViewportConfigChange = useCallback(
+    (cfg: { gizmoType?: GizmoType; shadingMode?: ShadingMode; mode?: ViewportMode }) => {
+      if (cfg.gizmoType !== undefined) {
+        setGizmoType((prev) => (prev !== cfg.gizmoType ? cfg.gizmoType! : prev));
+      }
+      if (cfg.shadingMode !== undefined) {
+        setShadingMode((prev) => (prev !== cfg.shadingMode ? cfg.shadingMode! : prev));
+      }
+      if (cfg.mode !== undefined) {
+        setViewportMode((prev) => (prev !== cfg.mode ? cfg.mode! : prev));
+      }
+    },
+    [],
+  );
 
   // 3. Project File States
   const [projectName, setProjectName] = useState<string>(initialProject?.name || 'Untitled.belt');
@@ -1145,19 +1177,11 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
           <ViewportContainer
             sceneStore={sceneStore}
             commandManager={commandManager}
-            config={{
-              gizmoType,
-              shadingMode,
-              mode: viewportMode,
-            }}
+            config={viewportConfig}
             showToolbar={true}
             showOverlays={true}
             showStats={true}
-            onConfigChange={(cfg) => {
-              if (cfg.gizmoType !== undefined) setGizmoType(cfg.gizmoType);
-              if (cfg.shadingMode !== undefined) setShadingMode(cfg.shadingMode);
-              if (cfg.mode !== undefined) setViewportMode(cfg.mode);
-            }}
+            onConfigChange={handleViewportConfigChange}
             className="w-full h-full"
           />
         }
