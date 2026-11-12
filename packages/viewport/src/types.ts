@@ -16,7 +16,7 @@ import type {
   SceneNode,
   ICommand,
 } from '@blender-elt/contracts';
-import type { SceneGraphState } from '@blender-elt/scene-core';
+import type { SceneGraphState, SelectionStoreState } from '@blender-elt/scene-core';
 import type { CommandManager } from '@blender-elt/commands';
 
 export type {
@@ -46,6 +46,11 @@ export interface SnapConfig {
 }
 
 /**
+ * Axis constraint lock for transformations in viewport
+ */
+export type AxisLock = 'X' | 'Y' | 'Z' | null;
+
+/**
  * Standard camera view presets inspired by Blender Numpad
  */
 export type StandardViewpoint =
@@ -60,10 +65,12 @@ export interface ViewportState {
   cameraProjection: CameraProjection;
   activeViewpoint: StandardViewpoint;
   isGizmoDragging: boolean;
+  axisLock: AxisLock;
   hoveredNodeId: string | null;
   showStats: boolean;
   showToolbar: boolean;
   showOverlays: boolean;
+  show3DCursor: boolean;
   activeCameraId: string | null;
 
   // Actions
@@ -78,10 +85,13 @@ export interface ViewportState {
   toggleCameraProjection: () => void;
   setActiveViewpoint: (viewpoint: StandardViewpoint) => void;
   setIsGizmoDragging: (dragging: boolean) => void;
+  setAxisLock: (axis: AxisLock) => void;
+  toggleAxisLock: (axis: 'X' | 'Y' | 'Z') => void;
   setHoveredNodeId: (id: string | null) => void;
   setShowStats: (show: boolean) => void;
   setShowToolbar: (show: boolean) => void;
   setShowOverlays: (show: boolean) => void;
+  setShow3DCursor: (show: boolean) => void;
   setActiveCameraId: (id: string | null) => void;
 }
 
@@ -91,6 +101,8 @@ export interface ViewportState {
 export interface ViewportProps {
   /** Scene Graph Zustand store instance */
   sceneStore?: StoreApi<SceneGraphState>;
+  /** Selection Zustand store instance */
+  selectionStore?: StoreApi<SelectionStoreState>;
   /** CommandManager instance for undo/redo history */
   commandManager?: CommandManager;
   /** Initial or controlled viewport configuration */
@@ -109,12 +121,18 @@ export interface ViewportProps {
   showOverlays?: boolean;
   /** Whether to show FPS and polycount stats overlay */
   showStats?: boolean;
+  /** Whether to show 3D cursor overlay */
+  show3DCursor?: boolean;
+  /** Initial or controlled axis lock */
+  axisLock?: AxisLock;
   /** Callback fired when an object transform is finalized via gizmo */
   onTransformCommit?: (nodeId: string, oldTransform: Transform, newTransform: Transform) => void;
   /** Callback fired when selection changes via viewport raycasting */
   onSelectNode?: (nodeId: string | null, multi: boolean) => void;
   /** Callback fired when viewport config changes */
   onConfigChange?: (config: ViewportConfig) => void;
+  /** Callback fired when axis lock changes */
+  onAxisLockChange?: (axis: AxisLock) => void;
   /** Children to render inside the viewport overlay layer */
   children?: React.ReactNode;
 }

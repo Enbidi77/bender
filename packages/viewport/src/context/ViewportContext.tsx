@@ -22,9 +22,15 @@ import type {
   TransformSpace,
   ShadingMode,
   ViewportMode,
+  AxisLock,
 } from '../types.js';
 import { DEFAULT_VIEWPORT_CONFIG, DEFAULT_SNAP_CONFIG } from '../constants.js';
-import { createSceneStore, type SceneGraphState } from '@blender-elt/scene-core';
+import {
+  createSceneStore,
+  createSelectionStore,
+  type SceneGraphState,
+  type SelectionStoreState,
+} from '@blender-elt/scene-core';
 import { CommandManager } from '@blender-elt/commands';
 import { TransformObjectCommand } from '../commands/transform-command.js';
 
@@ -32,6 +38,7 @@ export type OrbitControlsInstance = React.ComponentRef<typeof OrbitControls>;
 
 export interface ViewportContextValue extends ViewportState {
   sceneStore: StoreApi<SceneGraphState>;
+  selectionStore: StoreApi<SelectionStoreState>;
   commandManager?: CommandManager;
   orbitControlsRef: React.MutableRefObject<OrbitControlsInstance | null>;
   cameraRef: React.MutableRefObject<THREE.Camera | null>;
@@ -50,6 +57,7 @@ export interface ViewportProviderProps extends ViewportProps {
 
 export const ViewportProvider: React.FC<ViewportProviderProps> = ({
   sceneStore: externalSceneStore,
+  selectionStore: externalSelectionStore,
   commandManager: externalCommandManager,
   config: initialConfig,
   snapConfig: initialSnapConfig,
@@ -57,17 +65,26 @@ export const ViewportProvider: React.FC<ViewportProviderProps> = ({
   showToolbar = true,
   showOverlays = true,
   showStats = false,
+  show3DCursor: initialShow3DCursor = true,
+  axisLock: initialAxisLock = null,
   onTransformCommit,
   onSelectNode,
   onConfigChange,
+  onAxisLockChange,
   children,
 }) => {
-  // 1. Fallback scene store and command manager if not provided
+  // 1. Fallback scene store, selection store, and command manager if not provided
   const internalSceneStoreRef = useRef<StoreApi<SceneGraphState> | null>(null);
   if (!externalSceneStore && !internalSceneStoreRef.current) {
     internalSceneStoreRef.current = createSceneStore();
   }
   const sceneStore = externalSceneStore ?? internalSceneStoreRef.current!;
+
+  const internalSelectionStoreRef = useRef<StoreApi<SelectionStoreState> | null>(null);
+  if (!externalSelectionStore && !internalSelectionStoreRef.current) {
+    internalSelectionStoreRef.current = createSelectionStore();
+  }
+  const selectionStore = externalSelectionStore ?? internalSelectionStoreRef.current!;
 
   const internalCommandManagerRef = useRef<CommandManager | null>(null);
   if (!externalCommandManager && !internalCommandManagerRef.current) {
@@ -102,11 +119,32 @@ export const ViewportProvider: React.FC<ViewportProviderProps> = ({
 
   const [activeViewpoint, setActiveViewpoint] = useState<StandardViewpoint>('perspective');
   const [isGizmoDragging, setIsGizmoDragging] = useState<boolean>(false);
+  const [axisLock, setAxisLockState] = useState<AxisLock>(initialAxisLock ?? null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [statsVisible, setShowStats] = useState<boolean>(showStats);
   const [toolbarVisible, setShowToolbar] = useState<boolean>(showToolbar);
   const [overlaysVisible, setShowOverlays] = useState<boolean>(showOverlays);
+  const [cursorVisible, setShow3DCursor] = useState<boolean>(initialShow3DCursor);
   const [activeCameraId, setActiveCameraId] = useState<string | null>(null);
+
+  const setAxisLock = useCallback(
+    (axis: AxisLock) => {
+      setAxisLockState(axis);
+      onAxisLockChange?.(axis);
+    },
+    [onAxisLockChange],
+  );
+
+  const toggleAxisLock = useCallback(
+    (axis: 'X' | 'Y' | 'Z') => {
+      setAxisLockState((prev) => {
+        const next = prev === axis ? null : axis;
+        onAxisLockChange?.(next);
+        return next;
+      });
+    },
+    [onAxisLockChange],
+  );
 
   // 3. Object refs for imperative camera navigation & focus
   const orbitControlsRef = useRef<OrbitControlsInstance | null>(null);
@@ -277,10 +315,12 @@ export const ViewportProvider: React.FC<ViewportProviderProps> = ({
       cameraProjection,
       activeViewpoint,
       isGizmoDragging,
+      axisLock,
       hoveredNodeId,
       showStats: statsVisible,
       showToolbar: toolbarVisible,
       showOverlays: overlaysVisible,
+      show3DCursor: cursorVisible,
       activeCameraId,
 
       setConfig,
@@ -294,13 +334,17 @@ export const ViewportProvider: React.FC<ViewportProviderProps> = ({
       toggleCameraProjection,
       setActiveViewpoint,
       setIsGizmoDragging,
+      setAxisLock,
+      toggleAxisLock,
       setHoveredNodeId,
       setShowStats,
       setShowToolbar,
       setShowOverlays,
+      setShow3DCursor,
       setActiveCameraId,
 
       sceneStore,
+      selectionStore,
       commandManager,
       orbitControlsRef,
       cameraRef,
@@ -316,10 +360,12 @@ export const ViewportProvider: React.FC<ViewportProviderProps> = ({
       cameraProjection,
       activeViewpoint,
       isGizmoDragging,
+      axisLock,
       hoveredNodeId,
       statsVisible,
       toolbarVisible,
       overlaysVisible,
+      cursorVisible,
       activeCameraId,
       setConfig,
       setMode,
@@ -332,12 +378,15 @@ export const ViewportProvider: React.FC<ViewportProviderProps> = ({
       toggleCameraProjection,
       setActiveViewpoint,
       setIsGizmoDragging,
+      setAxisLock,
+      toggleAxisLock,
       setHoveredNodeId,
       setShowStats,
       setShowToolbar,
       setShowOverlays,
       setActiveCameraId,
       sceneStore,
+      selectionStore,
       commandManager,
       focusOnNode,
       focusOnBox,

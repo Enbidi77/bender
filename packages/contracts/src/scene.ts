@@ -1,3 +1,5 @@
+import type { ModifierConfig } from './modifiers.js';
+
 /**
  * 3D math and vector contracts
  */
@@ -66,6 +68,7 @@ export interface MeshNode extends BaseSceneNode {
   materialId?: string;
   castShadow?: boolean;
   receiveShadow?: boolean;
+  modifiers?: ModifierConfig[];
 }
 
 export type CameraProjection = 'perspective' | 'orthographic';

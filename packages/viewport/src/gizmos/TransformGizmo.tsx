@@ -5,8 +5,15 @@ import { useViewportContext } from '../context/ViewportContext.js';
 import type { Transform } from '@blender-elt/contracts';
 
 export const TransformGizmo: React.FC = () => {
-  const { config, snapConfig, sceneStore, sceneObjectsRef, setIsGizmoDragging, commitTransform } =
-    useViewportContext();
+  const {
+    config,
+    snapConfig,
+    axisLock,
+    sceneStore,
+    sceneObjectsRef,
+    setIsGizmoDragging,
+    commitTransform,
+  } = useViewportContext();
 
   const activeNodeId = useSyncExternalStore(
     sceneStore.subscribe,
@@ -106,6 +113,9 @@ export const TransformGizmo: React.FC = () => {
       mode={config.gizmoType}
       space={config.transformSpace}
       size={0.8}
+      showX={axisLock ? axisLock === 'X' : true}
+      showY={axisLock ? axisLock === 'Y' : true}
+      showZ={axisLock ? axisLock === 'Z' : true}
       translationSnap={snapConfig.enabled ? snapConfig.translationSnap : undefined}
       rotationSnap={snapConfig.enabled ? snapConfig.rotationSnap : undefined}
       scaleSnap={snapConfig.enabled ? snapConfig.scaleSnap : undefined}

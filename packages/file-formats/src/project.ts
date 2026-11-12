@@ -52,6 +52,30 @@ export const BaseNodeFields = {
   metadata: z.record(z.string(), z.unknown()).optional(),
 };
 
+export const ModifierConfigSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    type: z.enum([
+      'subdivision',
+      'mirror',
+      'array',
+      'bevel',
+      'solidify',
+      'boolean',
+      'displace',
+      'decimate',
+      'wireframe',
+      'smooth',
+    ]),
+    enabled: z.boolean(),
+    showInViewport: z.boolean(),
+    showInRender: z.boolean(),
+    showInEditMode: z.boolean().optional(),
+    order: z.number(),
+  })
+  .passthrough();
+
 export const MeshNodeSchema = z.object({
   ...BaseNodeFields,
   type: z.literal('mesh'),
@@ -60,6 +84,7 @@ export const MeshNodeSchema = z.object({
   materialId: z.string().optional(),
   castShadow: z.boolean().optional(),
   receiveShadow: z.boolean().optional(),
+  modifiers: z.array(ModifierConfigSchema).optional(),
 });
 
 export const CameraNodeSchema = z.object({
@@ -234,6 +259,122 @@ export const ProjectMetadataSchema = z.object({
   description: z.string().optional(),
 });
 
+export const SceneCollectionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  visible: z.boolean(),
+  locked: z.boolean(),
+  color: z.string().optional(),
+  nodeIds: z.array(z.string()),
+});
+
+export const Cursor3DSchema = z.object({
+  position: Vector3Schema,
+  rotation: EulerSchema,
+});
+
+export const PivotPointSchema = z.enum([
+  'bounding-box-center',
+  'median-point',
+  'individual-origins',
+  '3d-cursor',
+  'active-element',
+]);
+
+export const ObjectSelectionStateSchema = z.object({
+  activeNodeId: z.string().nullable(),
+  selectedNodeIds: z.array(z.string()),
+  selectionOrder: z.array(z.string()),
+});
+
+export const EditMeshSelectionStateSchema = z.object({
+  elementModes: z.array(z.enum(['vertex', 'edge', 'face'])),
+  selectedVertexIndices: z.array(z.number()),
+  selectedEdgeIndices: z.array(z.number()),
+  selectedFaceIndices: z.array(z.number()),
+  activeVertexIndex: z.number().nullable(),
+  activeEdgeIndex: z.number().nullable(),
+  activeFaceIndex: z.number().nullable(),
+});
+
+export const UnifiedSelectionModelSchema = z.object({
+  object: ObjectSelectionStateSchema,
+  edit: EditMeshSelectionStateSchema,
+  pivotPoint: PivotPointSchema,
+  cursor3D: Cursor3DSchema,
+});
+
+export const EditorAreaTypeSchema = z.enum([
+  'viewport-3d',
+  'outliner',
+  'properties',
+  'timeline',
+  'shader-editor',
+  'uv-editor',
+  'graph-editor',
+  'asset-browser',
+  'console',
+]);
+
+export const DockPanelNodeSchema = z.object({
+  id: z.string(),
+  type: z.literal('panel'),
+  areaType: EditorAreaTypeSchema,
+  activeTabId: z.string().optional(),
+  tabs: z.array(EditorAreaTypeSchema).optional(),
+  collapsed: z.boolean().optional(),
+  minWidth: z.number().optional(),
+  minHeight: z.number().optional(),
+});
+
+export type DockAreaNodeType =
+  | z.infer<typeof DockPanelNodeSchema>
+  | {
+      id: string;
+      type: 'split';
+      direction: 'horizontal' | 'vertical';
+      ratio: number;
+      first: DockAreaNodeType;
+      second: DockAreaNodeType;
+    };
+
+export const DockAreaNodeSchema: z.ZodType<DockAreaNodeType> = z.lazy(() =>
+  z.union([
+    DockPanelNodeSchema,
+    z.object({
+      id: z.string(),
+      type: z.literal('split'),
+      direction: z.enum(['horizontal', 'vertical']),
+      ratio: z.number(),
+      first: DockAreaNodeSchema,
+      second: DockAreaNodeSchema,
+    }),
+  ]),
+);
+
+export const WorkspaceDefinitionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  icon: z.string().optional(),
+  defaultMode: z.enum([
+    'object',
+    'edit',
+    'sculpt',
+    'vertex-paint',
+    'weight-paint',
+    'texture-paint',
+  ]),
+  layout: DockAreaNodeSchema,
+  viewportConfig: z.record(z.string(), z.unknown()).optional(),
+  order: z.number(),
+});
+
+export const WorkspaceLayoutConfigSchema = z.object({
+  activeWorkspaceId: z.string(),
+  workspaces: z.record(z.string(), WorkspaceDefinitionSchema),
+  customWorkspaces: z.record(z.string(), WorkspaceDefinitionSchema).optional(),
+});
+
 export const ProjectDocumentSchema = z.object({
   version: z.string(),
   metadata: ProjectMetadataSchema,
@@ -241,8 +382,11 @@ export const ProjectDocumentSchema = z.object({
   nodes: z.record(z.string(), SceneNodeSchema),
   geometries: z.record(z.string(), MeshDataSchema),
   materials: z.record(z.string(), MaterialDefinitionSchema),
+  collections: z.record(z.string(), SceneCollectionSchema).optional(),
   timeline: AnimationTimelineSchema.optional(),
   viewport: ViewportConfigSchema.optional(),
+  workspace: WorkspaceLayoutConfigSchema.optional(),
+  selection: UnifiedSelectionModelSchema.optional(),
 });
 
 /**

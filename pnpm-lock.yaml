@@ -374,9 +374,33 @@ importers:
 
   packages/ui:
     dependencies:
+      '@blender-elt/animation':
+        specifier: workspace:*
+        version: link:../animation
+      '@blender-elt/commands':
+        specifier: workspace:*
+        version: link:../commands
       '@blender-elt/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@blender-elt/file-formats':
+        specifier: workspace:*
+        version: link:../file-formats
+      '@blender-elt/materials':
+        specifier: workspace:*
+        version: link:../materials
+      '@blender-elt/modeling':
+        specifier: workspace:*
+        version: link:../modeling
+      '@blender-elt/persistence':
+        specifier: workspace:*
+        version: link:../persistence
+      '@blender-elt/scene-core':
+        specifier: workspace:*
+        version: link:../scene-core
+      '@blender-elt/viewport':
+        specifier: workspace:*
+        version: link:../viewport
       clsx:
         specifier: ^2.1.1
         version: 2.1.1

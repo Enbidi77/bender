@@ -11,6 +11,7 @@ export * from './camera/NavigationControls.js';
 export * from './overlays/GridFloor.js';
 export * from './overlays/CoordinateAxes.js';
 export * from './overlays/OriginMarker.js';
+export * from './overlays/Cursor3D.js';
 export * from './lighting/StudioLighting.js';
 export * from './lighting/ViewportLighting.js';
 export * from './renderer/MeshObject.js';

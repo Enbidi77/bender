@@ -1,6 +1,3 @@
-import { promises as fs } from 'fs';
-import { dirname } from 'path';
-
 export interface IStorageAdapter {
   read(keyOrPath: string): Promise<string>;
   write(keyOrPath: string, content: string): Promise<void>;
@@ -84,21 +81,73 @@ export class LocalStorageAdapter implements IStorageAdapter {
 }
 
 /**
- * Node.js / Electron file system storage adapter
+ * Minimal interfaces for lazy Node.js fs/path injection
+ */
+export interface NodeFsPromises {
+  readFile(path: string, encoding: string): Promise<string>;
+  writeFile(path: string, data: string, encoding: string): Promise<void>;
+  mkdir(path: string, options?: { recursive?: boolean }): Promise<string | undefined | void>;
+  access(path: string): Promise<void>;
+  unlink(path: string): Promise<void>;
+}
+
+export interface NodePathModule {
+  dirname(path: string): string;
+}
+
+export interface FileStorageAdapterOptions {
+  fs?: NodeFsPromises;
+  path?: NodePathModule;
+}
+
+/**
+ * Node.js / Electron file system storage adapter.
+ * Uses lazy dynamic import and optional dependency injection to ensure
+ * no top-level Node.js imports occur when evaluated in browser/Next.js runtimes.
  */
 export class FileStorageAdapter implements IStorageAdapter {
+  private fsPromise: Promise<{ fs: NodeFsPromises; path: NodePathModule }> | null = null;
+  private injectedFs?: NodeFsPromises;
+  private injectedPath?: NodePathModule;
+
+  constructor(options?: FileStorageAdapterOptions) {
+    if (options?.fs) this.injectedFs = options.fs;
+    if (options?.path) this.injectedPath = options.path;
+  }
+
+  private async getNodeDeps(): Promise<{ fs: NodeFsPromises; path: NodePathModule }> {
+    if (this.injectedFs && this.injectedPath) {
+      return { fs: this.injectedFs, path: this.injectedPath };
+    }
+
+    if (!this.fsPromise) {
+      this.fsPromise = (async () => {
+        const fsMod = await import('fs');
+        const pathMod = await import('path');
+        const fs = (this.injectedFs || (fsMod.promises ?? fsMod)) as unknown as NodeFsPromises;
+        const path = (this.injectedPath || pathMod) as NodePathModule;
+        return { fs, path };
+      })();
+    }
+
+    return this.fsPromise;
+  }
+
   async read(keyOrPath: string): Promise<string> {
+    const { fs } = await this.getNodeDeps();
     return await fs.readFile(keyOrPath, 'utf-8');
   }
 
   async write(keyOrPath: string, content: string): Promise<void> {
-    const dir = dirname(keyOrPath);
+    const { fs, path } = await this.getNodeDeps();
+    const dir = path.dirname(keyOrPath);
     await fs.mkdir(dir, { recursive: true });
     await fs.writeFile(keyOrPath, content, 'utf-8');
   }
 
   async exists(keyOrPath: string): Promise<boolean> {
     try {
+      const { fs } = await this.getNodeDeps();
       await fs.access(keyOrPath);
       return true;
     } catch {
@@ -108,6 +157,7 @@ export class FileStorageAdapter implements IStorageAdapter {
 
   async delete(keyOrPath: string): Promise<void> {
     try {
+      const { fs } = await this.getNodeDeps();
       await fs.unlink(keyOrPath);
     } catch {
       // file might not exist

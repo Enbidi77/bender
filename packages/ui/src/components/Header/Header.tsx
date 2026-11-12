@@ -3,7 +3,7 @@ import { Undo2, Redo2, Sun, Moon, Search, Minus, Square, X } from 'lucide-react'
 import { MenuBar, type MenuCategory } from './MenuBar.js';
 import { useTheme } from '../../theme/ThemeContext.js';
 import { cn } from '../common/Button.js';
-import type { ViewportMode } from '@blender-elt/contracts';
+import type { ViewportMode, WorkspaceDefinition } from '@blender-elt/contracts';
 
 export interface HeaderProps {
   projectName?: string;
@@ -16,6 +16,11 @@ export interface HeaderProps {
   customCategories?: MenuCategory[];
   viewportMode?: ViewportMode;
   onViewportModeChange?: (mode: ViewportMode) => void;
+  workspaces?: WorkspaceDefinition[];
+  activeWorkspaceId?: string;
+  onSelectWorkspace?: (workspaceId: string) => void;
+  headerPrefix?: React.ReactNode;
+  headerSuffix?: React.ReactNode;
   onOpenCommandPalette?: () => void;
   onMinimize?: () => void;
   onMaximize?: () => void;
@@ -34,6 +39,11 @@ export const Header: React.FC<HeaderProps> = ({
   customCategories,
   viewportMode = 'object',
   onViewportModeChange,
+  workspaces,
+  activeWorkspaceId,
+  onSelectWorkspace,
+  headerPrefix,
+  headerSuffix,
   onOpenCommandPalette,
   onMinimize,
   onMaximize,
@@ -49,8 +59,10 @@ export const Header: React.FC<HeaderProps> = ({
         className,
       )}
     >
-      {/* Left: App Logo + MenuBar + Mode Switcher */}
+      {/* Left: App Logo + MenuBar + Mode Switcher + Workspaces */}
       <div className="flex items-center gap-3">
+        {headerPrefix}
+
         {/* App Branding */}
         <div className="flex items-center gap-1.5 font-bold tracking-tight text-white mr-1">
           <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-[#ea7600] to-[#f49b42] flex items-center justify-center text-[11px] font-black text-white shadow-sm">
@@ -82,6 +94,30 @@ export const Header: React.FC<HeaderProps> = ({
             </select>
           </div>
         )}
+
+        {/* Workspace Switching Tabs */}
+        {workspaces && workspaces.length > 0 && (
+          <div className="hidden xl:flex items-center gap-0.5 border-l border-[#3a3a3a] pl-2 ml-1">
+            {workspaces.map((ws) => {
+              const isActive = ws.id === activeWorkspaceId;
+              return (
+                <button
+                  key={ws.id}
+                  onClick={() => onSelectWorkspace?.(ws.id)}
+                  title={`Switch to ${ws.name} workspace`}
+                  className={cn(
+                    'px-2 py-0.5 rounded text-[11px] font-medium transition-colors',
+                    isActive
+                      ? 'bg-[#3c3d42] text-white shadow-xs border-b border-[#4772b3]'
+                      : 'text-gray-400 hover:text-gray-200 hover:bg-[#323236]',
+                  )}
+                >
+                  {ws.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Center: Project Name & Dirty indicator */}
@@ -96,6 +132,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right: Quick actions + Theme switcher + Window Controls */}
       <div className="flex items-center gap-2">
+        {headerSuffix}
         {/* Command Search Button */}
         {onOpenCommandPalette && (
           <button

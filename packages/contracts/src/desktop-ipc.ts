@@ -1,4 +1,6 @@
-import type { ProjectDocument, SupportedFileFormat, ExportOptions } from './file-formats.js';
+import type { ProjectDocument, ExportPayload, ExportResult } from './file-formats.js';
+
+export type { ExportPayload, ExportResult };
 
 /**
  * Filter item for file dialogs
@@ -49,19 +51,6 @@ export interface OpenProjectResult {
   success: boolean;
   filePath?: string;
   document?: ProjectDocument;
-  error?: string;
-}
-
-export interface ExportPayload {
-  filePath: string;
-  format: SupportedFileFormat;
-  data: Uint8Array | string;
-  options?: ExportOptions;
-}
-
-export interface ExportResult {
-  success: boolean;
-  filePath: string;
   error?: string;
 }
 

@@ -27,6 +27,7 @@ export type {
 
 export * from './primitives/index.js';
 export * from './topology/index.js';
+export * from './modifiers/index.js';
 
 import { MeshTopology } from './topology/mesh-topology.js';
 

@@ -8,6 +8,7 @@ import { ViewportLighting } from './lighting/ViewportLighting.js';
 import { GridFloor } from './overlays/GridFloor.js';
 import { CoordinateAxes } from './overlays/CoordinateAxes.js';
 import { OriginMarker } from './overlays/OriginMarker.js';
+import { Cursor3DOverlay } from './overlays/Cursor3D.js';
 import { SceneRenderer } from './renderer/SceneRenderer.js';
 import { SelectionHighlight } from './gizmos/SelectionHighlight.js';
 import { TransformGizmo } from './gizmos/TransformGizmo.js';
@@ -48,6 +49,7 @@ export const ViewportCanvas: React.FC = () => {
       <GridFloor />
       <CoordinateAxes />
       <OriginMarker />
+      <Cursor3DOverlay />
 
       {/* Scene Graph Objects */}
       <SceneRenderer />

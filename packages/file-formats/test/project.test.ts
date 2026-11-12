@@ -165,4 +165,109 @@ describe('ProjectDocument (.belt / JSON) Serializer & Deserializer', () => {
     });
     expect(() => deserializeProject(jsonWithoutVersion)).toThrowError(/missing version identifier/);
   });
+
+  it('serializes and restores MeshNode modifiers, WorkspaceLayout, and SelectionState', () => {
+    const docWithExtensions: ProjectDocument = {
+      ...sampleDocument,
+      nodes: {
+        ...sampleDocument.nodes,
+        'mesh-1': {
+          ...(sampleDocument.nodes['mesh-1'] as MeshNode),
+          modifiers: [
+            {
+              id: 'mod-subdiv',
+              name: 'Subdivision Surface',
+              type: 'subdivision',
+              enabled: true,
+              showInViewport: true,
+              showInRender: true,
+              order: 0,
+              levels: 2,
+              renderLevels: 3,
+              algorithm: 'catmull-clark',
+            },
+            {
+              id: 'mod-bevel',
+              name: 'Bevel',
+              type: 'bevel',
+              enabled: true,
+              showInViewport: true,
+              showInRender: true,
+              order: 1,
+              width: 0.1,
+              segments: 3,
+              profile: 0.5,
+              affect: 'edges',
+            },
+          ],
+        },
+      },
+      selection: {
+        object: {
+          activeNodeId: 'mesh-1',
+          selectedNodeIds: ['mesh-1'],
+          selectionOrder: ['mesh-1'],
+        },
+        edit: {
+          elementModes: ['face'],
+          selectedVertexIndices: [],
+          selectedEdgeIndices: [],
+          selectedFaceIndices: [0],
+          activeVertexIndex: null,
+          activeEdgeIndex: null,
+          activeFaceIndex: 0,
+        },
+        pivotPoint: '3d-cursor',
+        cursor3D: {
+          position: { x: 1, y: 2, z: 3 },
+          rotation: { x: 0, y: 0, z: 0 },
+        },
+      },
+      workspace: {
+        activeWorkspaceId: 'layout',
+        workspaces: {
+          layout: {
+            id: 'layout',
+            name: 'Layout',
+            defaultMode: 'object',
+            order: 0,
+            layout: {
+              id: 'main-split',
+              type: 'split',
+              direction: 'vertical',
+              ratio: 0.7,
+              first: {
+                id: 'panel-vp',
+                type: 'panel',
+                areaType: 'viewport-3d',
+              },
+              second: {
+                id: 'panel-tl',
+                type: 'panel',
+                areaType: 'timeline',
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const serialized = serializeProject(docWithExtensions);
+    expect(serialized).toContain('"mod-subdiv"');
+    expect(serialized).toContain('"3d-cursor"');
+    expect(serialized).toContain('"panel-tl"');
+
+    const restored = deserializeProject(serialized);
+    const restoredMesh = restored.nodes['mesh-1'] as MeshNode;
+    expect(restoredMesh.modifiers).toHaveLength(2);
+    expect(restoredMesh.modifiers?.[0].type).toBe('subdivision');
+    expect(restoredMesh.modifiers?.[1].type).toBe('bevel');
+
+    expect(restored.selection?.pivotPoint).toBe('3d-cursor');
+    expect(restored.selection?.cursor3D.position).toEqual({ x: 1, y: 2, z: 3 });
+    expect(restored.selection?.edit.selectedFaceIndices).toEqual([0]);
+
+    expect(restored.workspace?.activeWorkspaceId).toBe('layout');
+    expect(restored.workspace?.workspaces.layout.name).toBe('Layout');
+  });
 });

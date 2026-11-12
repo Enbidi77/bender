@@ -119,5 +119,144 @@ describe('packages/persistence', () => {
 
       expect(loaded.metadata.name).toBe('In-Memory Project');
     });
+
+    it('FileStorageAdapter supports custom dependency injection for fs and path', async () => {
+      const mockStorage = new Map<string, string>();
+      const customFs = {
+        readFile: async (p: string) => {
+          const val = mockStorage.get(p);
+          if (val === undefined) throw new Error('Not found');
+          return val;
+        },
+        writeFile: async (p: string, data: string) => {
+          mockStorage.set(p, data);
+        },
+        mkdir: async () => {},
+        access: async (p: string) => {
+          if (!mockStorage.has(p)) throw new Error('Not found');
+        },
+        unlink: async (p: string) => {
+          mockStorage.delete(p);
+        },
+      };
+      const customPath = {
+        dirname: (p: string) => p.substring(0, p.lastIndexOf('/')) || '.',
+      };
+
+      const adapter = new FileStorageAdapter({ fs: customFs as any, path: customPath });
+      await adapter.write('/app/test.belt', '{"custom": true}');
+      expect(await adapter.exists('/app/test.belt')).toBe(true);
+      expect(await adapter.read('/app/test.belt')).toBe('{"custom": true}');
+      await adapter.delete('/app/test.belt');
+      expect(await adapter.exists('/app/test.belt')).toBe(false);
+    });
+
+    it('serializes and deserializes modifiers, selection model, and workspace layout schemas', () => {
+      const doc = createDefaultProjectDocument('Extended Schema Project');
+
+      // 1. Add modifiers to cube node
+      const subModifier = {
+        id: 'subdiv-1',
+        name: 'Subdivision',
+        type: 'subdivision' as const,
+        enabled: true,
+        showInViewport: true,
+        showInRender: true,
+        order: 0,
+        levels: 2,
+        renderLevels: 3,
+        algorithm: 'catmull-clark' as const,
+      };
+
+      const mirrorModifier = {
+        id: 'mirror-1',
+        name: 'Mirror',
+        type: 'mirror' as const,
+        enabled: true,
+        showInViewport: true,
+        showInRender: true,
+        order: 1,
+        axis: { x: true, y: false, z: false },
+        clip: true,
+        merge: true,
+        mergeThreshold: 0.001,
+      };
+
+      (doc.nodes['cube-default'] as any).modifiers = [subModifier, mirrorModifier];
+
+      // 2. Add UnifiedSelectionModel
+      doc.selection = {
+        object: {
+          activeNodeId: 'cube-default',
+          selectedNodeIds: ['cube-default'],
+          selectionOrder: ['cube-default'],
+        },
+        edit: {
+          elementModes: ['vertex'],
+          selectedVertexIndices: [0, 1, 2],
+          selectedEdgeIndices: [],
+          selectedFaceIndices: [],
+          activeVertexIndex: 0,
+          activeEdgeIndex: null,
+          activeFaceIndex: null,
+        },
+        pivotPoint: 'median-point',
+        cursor3D: {
+          position: { x: 0, y: 0, z: 0 },
+          rotation: { x: 0, y: 0, z: 0 },
+        },
+      };
+
+      // 3. Add WorkspaceLayoutConfig
+      doc.workspace = {
+        activeWorkspaceId: 'modeling',
+        workspaces: {
+          modeling: {
+            id: 'modeling',
+            name: 'Modeling',
+            defaultMode: 'edit',
+            order: 1,
+            layout: {
+              id: 'split-root',
+              type: 'split',
+              direction: 'horizontal',
+              ratio: 0.8,
+              first: {
+                id: 'panel-viewport',
+                type: 'panel',
+                areaType: 'viewport-3d',
+              },
+              second: {
+                id: 'panel-outliner',
+                type: 'panel',
+                areaType: 'outliner',
+              },
+            },
+          },
+        },
+      };
+
+      // Serialize to .belt JSON
+      const json = serializeProject(doc);
+      expect(typeof json).toBe('string');
+      expect(json).toContain('"subdivision"');
+      expect(json).toContain('"median-point"');
+      expect(json).toContain('"viewport-3d"');
+
+      // Deserialize and verify integrity
+      const restored = deserializeProject(json);
+      const restoredMesh = restored.nodes['cube-default'] as any;
+      expect(restoredMesh.modifiers).toHaveLength(2);
+      expect(restoredMesh.modifiers?.[0].type).toBe('subdivision');
+      expect(restoredMesh.modifiers?.[0].levels).toBe(2);
+      expect(restoredMesh.modifiers?.[1].type).toBe('mirror');
+
+      expect(restored.selection?.object.activeNodeId).toBe('cube-default');
+      expect(restored.selection?.pivotPoint).toBe('median-point');
+      expect(restored.selection?.edit.selectedVertexIndices).toEqual([0, 1, 2]);
+
+      expect(restored.workspace?.activeWorkspaceId).toBe('modeling');
+      expect(restored.workspace?.workspaces.modeling.defaultMode).toBe('edit');
+    });
   });
 });

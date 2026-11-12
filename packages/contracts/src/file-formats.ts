@@ -3,6 +3,8 @@ import type { MaterialDefinition } from './materials.js';
 import type { AnimationTimeline } from './animation.js';
 import type { ViewportConfig } from './viewport.js';
 import type { IMeshData } from './modeling.js';
+import type { WorkspaceLayoutConfig } from './workspace.js';
+import type { UnifiedSelectionModel } from './selection.js';
 
 /**
  * Standard 3D file formats supported for import and export
@@ -38,6 +40,25 @@ export interface ExportOptions {
 }
 
 /**
+ * Universal payload for exporting scenes and assets
+ */
+export interface ExportPayload {
+  filePath: string;
+  format: SupportedFileFormat;
+  data: Uint8Array | string;
+  options?: ExportOptions;
+}
+
+/**
+ * Universal export result
+ */
+export interface ExportResult {
+  success: boolean;
+  filePath: string;
+  error?: string;
+}
+
+/**
  * Project file document metadata
  */
 export interface ProjectMetadata {
@@ -63,4 +84,6 @@ export interface ProjectDocument {
   collections?: Record<string, SceneCollection>;
   timeline?: AnimationTimeline;
   viewport?: ViewportConfig;
+  workspace?: WorkspaceLayoutConfig;
+  selection?: UnifiedSelectionModel;
 }

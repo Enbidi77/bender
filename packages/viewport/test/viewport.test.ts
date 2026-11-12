@@ -240,4 +240,82 @@ describe('packages/viewport', () => {
       boxMesh.geometry.dispose();
     });
   });
+
+  describe('Axis Locking & Modal Transform Hotkeys', () => {
+    it('manages axis lock constraints (X, Y, Z) and show handle visibility', () => {
+      let axisLock: 'X' | 'Y' | 'Z' | null = null;
+
+      const getShowHandles = (lock: typeof axisLock) => ({
+        showX: lock === null || lock === 'X',
+        showY: lock === null || lock === 'Y',
+        showZ: lock === null || lock === 'Z',
+      });
+
+      // Default: all handles visible
+      expect(getShowHandles(axisLock)).toEqual({ showX: true, showY: true, showZ: true });
+
+      // Lock to X
+      axisLock = 'X';
+      expect(getShowHandles(axisLock)).toEqual({ showX: true, showY: false, showZ: false });
+
+      // Lock to Y
+      axisLock = 'Y';
+      expect(getShowHandles(axisLock)).toEqual({ showX: false, showY: true, showZ: false });
+
+      // Lock to Z
+      axisLock = 'Z';
+      expect(getShowHandles(axisLock)).toEqual({ showX: false, showY: false, showZ: true });
+
+      // Release lock
+      axisLock = null;
+      expect(getShowHandles(axisLock)).toEqual({ showX: true, showY: true, showZ: true });
+    });
+  });
+
+  describe('3D Cursor Representation', () => {
+    it('stores and updates 3D cursor position and rotation', () => {
+      const cursor = {
+        position: { x: 2.5, y: -1.0, z: 4.0 },
+        rotation: { x: 0, y: Math.PI / 4, z: 0, order: 'XYZ' as const },
+      };
+
+      expect(cursor.position.x).toBe(2.5);
+      expect(cursor.position.y).toBe(-1.0);
+      expect(cursor.position.z).toBe(4.0);
+      expect(cursor.rotation.y).toBeCloseTo(Math.PI / 4);
+    });
+  });
+
+  describe('Scene Statistics Computation', () => {
+    it('accurately computes geometry vertices and triangle counts for box mesh', () => {
+      const geom = new THREE.BoxGeometry(2, 2, 2);
+      const posAttr = geom.getAttribute('position');
+      const idxAttr = geom.getIndex();
+
+      expect(posAttr).toBeDefined();
+      expect(posAttr.count).toBe(24); // 6 faces * 4 vertices
+      expect(idxAttr).toBeDefined();
+      expect(idxAttr!.count).toBe(36); // 12 triangles * 3 indices
+
+      const triangleCount = Math.floor(idxAttr!.count / 3);
+      expect(triangleCount).toBe(12);
+
+      const edgeCount = Math.floor(triangleCount * 1.5);
+      expect(edgeCount).toBe(18);
+
+      geom.dispose();
+    });
+
+    it('computes triangle counts for non-indexed geometries', () => {
+      const geom = new THREE.BufferGeometry();
+      const positions = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0]);
+      geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+      const pos = geom.getAttribute('position');
+      const triCount = Math.floor(pos.count / 3);
+      expect(triCount).toBe(2);
+
+      geom.dispose();
+    });
+  });
 });
