@@ -62,12 +62,19 @@ function selectLocalFile(accept: string): Promise<File | null> {
  * Creates the Desktop platform bridge implementing IPlatformBridge for Electron
  */
 export function createDesktopPlatformBridge(): IPlatformBridge {
-  const bridge = (window as any).electronBridge || (window as any).electronAPI;
+  const getBridge = () => {
+    if (typeof window !== 'undefined') {
+      return (window as any).electronBridge || (window as any).electronAPI;
+    }
+    return undefined;
+  };
 
   return {
     platform: 'desktop',
     capabilities: {
-      nativeMenus: !!bridge?.onMenuAction,
+      get nativeMenus() {
+        return !!getBridge()?.onMenuAction;
+      },
       fileSystemAccess: true,
       windowControls: true,
       systemDialogs: true,
@@ -75,6 +82,7 @@ export function createDesktopPlatformBridge(): IPlatformBridge {
     },
     fileSystem: {
       saveProject: async (doc: ProjectDocument, filePath?: string) => {
+        const bridge = getBridge();
         if (bridge?.saveProject) {
           return await bridge.saveProject({
             filePath,
@@ -87,6 +95,7 @@ export function createDesktopPlatformBridge(): IPlatformBridge {
       },
       openProject: async (filePath?: string) => {
         let path = filePath;
+        const bridge = getBridge();
         if (!path && bridge?.showOpenDialog) {
           const res = await bridge.showOpenDialog({
             title: 'Open Project',
@@ -117,6 +126,7 @@ export function createDesktopPlatformBridge(): IPlatformBridge {
         }
       },
       exportScene: async (payload: ExportPayload): Promise<ExportResult> => {
+        const bridge = getBridge();
         const ext =
           payload.format === 'glb' ? 'glb' : payload.format === 'gltf' ? 'gltf' : payload.format;
 
@@ -144,6 +154,7 @@ export function createDesktopPlatformBridge(): IPlatformBridge {
         return { success: true, filePath: payload.filePath };
       },
       importScene: async (options?: Partial<ImportOptions>) => {
+        const bridge = getBridge();
         const format = options?.format || 'gltf';
         let fileData: string | ArrayBuffer | Uint8Array;
 
@@ -197,12 +208,20 @@ export function createDesktopPlatformBridge(): IPlatformBridge {
       },
     },
     window: {
-      minimize: () => bridge?.minimize?.(),
-      maximize: () => bridge?.maximize?.(),
-      close: () => bridge?.close?.(),
-      isMaximized: () => bridge?.isMaximized?.(),
-      onMaximizedChange: (cb: (maximized: boolean) => void) => bridge?.onMaximizedChange?.(cb),
-      setTitle: (title: string) => bridge?.setTitle?.(title),
+      minimize: () => {
+        getBridge()?.minimize?.();
+      },
+      maximize: () => {
+        getBridge()?.maximize?.();
+      },
+      close: () => {
+        getBridge()?.close?.();
+      },
+      isMaximized: () => getBridge()?.isMaximized?.() ?? false,
+      onMaximizedChange: (cb: (maximized: boolean) => void) => {
+        return getBridge()?.onMaximizedChange?.(cb) ?? (() => {});
+      },
+      setTitle: (title: string) => getBridge()?.setTitle?.(title),
     },
     clipboard: {
       readText: async () => navigator.clipboard.readText(),

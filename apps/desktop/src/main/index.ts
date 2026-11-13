@@ -216,8 +216,6 @@ function createWindow(): void {
     minHeight: 700,
     show: false,
     frame: false,
-    titleBarStyle: 'hidden',
-    titleBarOverlay: false,
     autoHideMenuBar: true,
     backgroundColor: '#1d1e22',
     webPreferences: {
@@ -231,6 +229,7 @@ function createWindow(): void {
   if (process.platform === 'darwin') {
     createApplicationMenu();
   } else {
+    Menu.setApplicationMenu(null);
     mainWindow.setMenu(null);
   }
 
@@ -355,28 +354,36 @@ ipcMain.handle('system:info', async (): Promise<SystemInfo> => {
 });
 
 ipcMain.on('window:minimize', (event) => {
-  const win = BrowserWindow.fromWebContents(event.sender) || mainWindow;
-  win?.minimize();
+  const win =
+    BrowserWindow.fromWebContents(event.sender) || mainWindow || BrowserWindow.getFocusedWindow();
+  if (win && !win.isDestroyed()) {
+    win.minimize();
+  }
 });
 
 ipcMain.on('window:maximize', (event) => {
-  const win = BrowserWindow.fromWebContents(event.sender) || mainWindow;
-  if (!win) return;
+  const win =
+    BrowserWindow.fromWebContents(event.sender) || mainWindow || BrowserWindow.getFocusedWindow();
+  if (!win || win.isDestroyed()) return;
   if (win.isMaximized()) {
     win.unmaximize();
   } else {
-    win?.maximize();
+    win.maximize();
   }
 });
 
 ipcMain.on('window:close', (event) => {
-  const win = BrowserWindow.fromWebContents(event.sender) || mainWindow;
-  win?.close();
+  const win =
+    BrowserWindow.fromWebContents(event.sender) || mainWindow || BrowserWindow.getFocusedWindow();
+  if (win && !win.isDestroyed()) {
+    win.close();
+  }
 });
 
 ipcMain.handle('window:is-maximized', (event) => {
-  const win = BrowserWindow.fromWebContents(event.sender) || mainWindow;
-  return win?.isMaximized() ?? false;
+  const win =
+    BrowserWindow.fromWebContents(event.sender) || mainWindow || BrowserWindow.getFocusedWindow();
+  return win && !win.isDestroyed() ? win.isMaximized() : false;
 });
 
 app.whenReady().then(() => {

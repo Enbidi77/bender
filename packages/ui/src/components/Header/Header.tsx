@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Undo2, Redo2, Sun, Moon, Search, Minus, Square, X } from 'lucide-react';
 import { MenuBar, type MenuCategory } from './MenuBar.js';
 import { useTheme } from '../../theme/ThemeContext.js';
@@ -81,13 +81,74 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { theme, toggleTheme } = useTheme();
 
+  // Desktop detection & maximized state tracking
+  const isDesktop =
+    typeof window !== 'undefined' &&
+    Boolean((window as any).electronBridge || (window as any).electronAPI);
+
+  const [internalIsMaximized, setInternalIsMaximized] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const bridge = (window as any).electronBridge || (window as any).electronAPI;
+    if (bridge?.isMaximized) {
+      Promise.resolve(bridge.isMaximized()).then((val: boolean) =>
+        setInternalIsMaximized(Boolean(val)),
+      );
+    }
+    if (bridge?.onMaximizedChange) {
+      return bridge.onMaximizedChange((max: boolean) => setInternalIsMaximized(max));
+    }
+    return undefined;
+  }, []);
+
+  const effectivelyMaximized = isMaximized || internalIsMaximized;
+
+  const handleMinimize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onMinimize) {
+      onMinimize();
+    }
+    if (typeof window !== 'undefined') {
+      const bridge = (window as any).electronBridge || (window as any).electronAPI;
+      bridge?.minimize?.();
+    }
+  };
+
+  const handleMaximize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onMaximize) {
+      onMaximize();
+    }
+    if (typeof window !== 'undefined') {
+      const bridge = (window as any).electronBridge || (window as any).electronAPI;
+      bridge?.maximize?.();
+    }
+  };
+
+  const handleClose = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onClose) {
+      onClose();
+    }
+    if (typeof window !== 'undefined') {
+      const bridge = (window as any).electronBridge || (window as any).electronAPI;
+      bridge?.close?.();
+    }
+  };
+
   const handleHeaderDoubleClick = (e: React.MouseEvent) => {
     // Only toggle maximize/restore when double-clicking empty header background
     const target = e.target as HTMLElement;
-    if (target.closest('button, select, input, a, [role="button"], [role="menuitem"]')) {
+    if (
+      target.closest('button, select, input, a, [role="button"], [role="menuitem"], .app-no-drag')
+    ) {
       return;
     }
-    onMaximize?.();
+    handleMaximize(e);
   };
 
   return (
@@ -262,66 +323,63 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         {/* Desktop Window Controls */}
-        {(onMinimize || onMaximize || onClose) && (
+        {(onMinimize || onMaximize || onClose || isDesktop) && (
           <div
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-            className="flex items-center ml-1 border-l border-[#3e3e3e] -mr-2"
+            className="app-no-drag flex items-center ml-1 border-l border-[#3e3e3e] -mr-2"
           >
-            {onMinimize && (
-              <button
-                type="button"
-                onClick={onMinimize}
-                className="h-9 w-10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#383838] transition-colors cursor-pointer"
-                title="Minimize to Taskbar"
-                aria-label="Minimize"
-              >
-                <Minus size={14} />
-              </button>
-            )}
-            {onMaximize && (
-              <button
-                type="button"
-                onClick={onMaximize}
-                className="h-9 w-10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#383838] transition-colors cursor-pointer"
-                title={isMaximized ? 'Restore Down' : 'Maximize'}
-                aria-label={isMaximized ? 'Restore Down' : 'Maximize'}
-              >
-                {isMaximized ? (
-                  <svg
-                    width="11"
-                    height="11"
-                    viewBox="0 0 11 11"
+            <button
+              type="button"
+              onClick={handleMinimize}
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+              className="app-no-drag h-9 w-10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#383838] transition-colors cursor-pointer select-none"
+              title="Minimize to Taskbar"
+              aria-label="Minimize"
+            >
+              <Minus size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={handleMaximize}
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+              className="app-no-drag h-9 w-10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#383838] transition-colors cursor-pointer select-none"
+              title={effectivelyMaximized ? 'Restore Down' : 'Maximize'}
+              aria-label={effectivelyMaximized ? 'Restore Down' : 'Maximize'}
+            >
+              {effectivelyMaximized ? (
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 11 11"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="stroke-current"
+                >
+                  <path d="M2.5 1.5H9.5V8.5H8.5V2.5H2.5V1.5Z" fill="currentColor" />
+                  <rect
+                    x="1.5"
+                    y="3.5"
+                    width="6.5"
+                    height="6.5"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
                     fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="stroke-current"
-                  >
-                    <path d="M2.5 1.5H9.5V8.5H8.5V2.5H2.5V1.5Z" fill="currentColor" />
-                    <rect
-                      x="1.5"
-                      y="3.5"
-                      width="6.5"
-                      height="6.5"
-                      stroke="currentColor"
-                      strokeWidth="1.2"
-                      fill="none"
-                    />
-                  </svg>
-                ) : (
-                  <Square size={11} />
-                )}
-              </button>
-            )}
-            {onClose && (
-              <button
-                type="button"
-                onClick={onClose}
-                className="h-9 w-11 flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#e81123] transition-colors cursor-pointer"
-                title="Close Application"
-                aria-label="Close"
-              >
-                <X size={14} />
-              </button>
-            )}
+                  />
+                </svg>
+              ) : (
+                <Square size={11} />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={handleClose}
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+              className="app-no-drag h-9 w-11 flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#e81123] transition-colors cursor-pointer select-none"
+              title="Close Application"
+              aria-label="Close"
+            >
+              <X size={14} />
+            </button>
           </div>
         )}
       </div>
