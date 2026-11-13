@@ -44,3 +44,6 @@ export * from './components/EditorStudio/platformBridges.js';
 
 // Sculpt Mode UI
 export * from './components/Sculpt/index.js';
+
+// Edit Mode UI
+export * from './components/EditMode/index.js';

@@ -29,6 +29,8 @@ import type {
   SymmetryConfig,
   SculptMaskOperation,
   VoxelRemeshConfig,
+  EditModeTool,
+  EditElementMode,
 } from '@blender-elt/contracts';
 import {
   createSceneStore,
@@ -67,6 +69,17 @@ import { PreferencesModal } from '../Modals/PreferencesModal.js';
 import { DEFAULT_WORKSPACES } from './workspaces.js';
 import { buildProjectDocument, calculateScenePolycounts } from './projectDocument.js';
 import { SculptToolbar, SculptStatusBar, SCULPT_BRUSH_DEFINITIONS } from '../Sculpt/index.js';
+import { ViewportToolbar } from '../Toolbar/ViewportToolbar.js';
+import {
+  EditModeToolbar,
+  EditToolSettingsBar,
+  EditContextMenu,
+  DeleteDissolveMenu,
+  EditModeStatusBar,
+  DEFAULT_EDIT_MODE_SETTINGS,
+  type EditModeSettings,
+  type EditSelectionStats,
+} from '../EditMode/index.js';
 
 export interface EditorStudioProps {
   /**
@@ -316,6 +329,77 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
       setIsRemeshing(false);
     }
   }, []);
+
+  // Edit Mode States
+  const isEditMode = viewportMode === 'edit' || activeWorkspaceId === 'modeling';
+  const [activeEditTool, setActiveEditTool] = useState<EditModeTool>('select');
+  const [activeElementModes, setActiveElementModes] = useState<EditElementMode[]>(['vertex']);
+  const [editModeSettings, setEditModeSettings] = useState<EditModeSettings>(
+    DEFAULT_EDIT_MODE_SETTINGS,
+  );
+  const [isContextMenuOpen, setIsContextMenuOpen] = useState<boolean>(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
+  const [isDeleteMenuOpen, setIsDeleteMenuOpen] = useState<boolean>(false);
+  const [deleteMenuPosition, setDeleteMenuPosition] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
+
+  const handleSelectEditElementMode = useCallback(
+    (mode: EditElementMode, isMultiSelect = false) => {
+      setActiveElementModes((prev) => {
+        if (isMultiSelect) {
+          if (prev.includes(mode)) {
+            return prev.length > 1 ? prev.filter((m) => m !== mode) : prev;
+          } else {
+            return [...prev, mode];
+          }
+        } else {
+          return [mode];
+        }
+      });
+    },
+    [],
+  );
+
+  const handleUpdateEditModeSettings = useCallback((updates: Partial<EditModeSettings>) => {
+    setEditModeSettings((prev) => ({ ...prev, ...updates }));
+    setIsDirty(true);
+  }, []);
+
+  const handleExecuteEditOperation = useCallback(
+    (opType: string, params?: Record<string, unknown>) => {
+      if (typeof window !== 'undefined') {
+        if (opType === 'extrude') {
+          window.dispatchEvent(new CustomEvent('blender-elt:edit-extrude', { detail: params }));
+        } else if (opType === 'inset') {
+          window.dispatchEvent(new CustomEvent('blender-elt:edit-inset', { detail: params }));
+        } else if (opType === 'bevel') {
+          window.dispatchEvent(new CustomEvent('blender-elt:edit-bevel', { detail: params }));
+        } else if (opType === 'loopcut') {
+          window.dispatchEvent(new CustomEvent('blender-elt:edit-loopcut', { detail: params }));
+        } else if (opType === 'knife') {
+          window.dispatchEvent(new CustomEvent('blender-elt:edit-knife', { detail: params }));
+        } else if (
+          opType === 'delete' ||
+          opType.startsWith('delete-') ||
+          opType.startsWith('dissolve-')
+        ) {
+          window.dispatchEvent(new CustomEvent('blender-elt:edit-delete', { detail: params }));
+        } else if (opType === 'select-all') {
+          window.dispatchEvent(new CustomEvent('blender-elt:edit-select-all', { detail: params }));
+        } else {
+          window.dispatchEvent(new CustomEvent(`blender-elt:edit-${opType}`, { detail: params }));
+        }
+      }
+      setIsDirty(true);
+      setSaveStatus('unsaved');
+    },
+    [],
+  );
 
   // 3. Project File States
   const [projectName, setProjectName] = useState<string>(initialProject?.name || 'Untitled.belt');
@@ -912,6 +996,78 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
         }
       }
 
+      // Tab key: Toggle between Object Mode and Edit Mode
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        setViewportMode((prev) => (prev === 'edit' ? 'object' : 'edit'));
+        return;
+      }
+
+      // Edit Mode Specific Hotkeys
+      if (isEditMode) {
+        // Element selection modes: 1 (vertex), 2 (edge), 3 (face)
+        if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+          if (e.key === '1') {
+            e.preventDefault();
+            handleSelectEditElementMode('vertex', e.shiftKey);
+            return;
+          }
+          if (e.key === '2') {
+            e.preventDefault();
+            handleSelectEditElementMode('edge', e.shiftKey);
+            return;
+          }
+          if (e.key === '3') {
+            e.preventDefault();
+            handleSelectEditElementMode('face', e.shiftKey);
+            return;
+          }
+
+          // Delete / Dissolve menu on X or Delete
+          if (e.key === 'x' || e.key === 'X' || e.key === 'Delete') {
+            e.preventDefault();
+            setDeleteMenuPosition({
+              x: typeof window !== 'undefined' ? window.innerWidth / 2 - 100 : 300,
+              y: typeof window !== 'undefined' ? window.innerHeight / 2 - 120 : 250,
+            });
+            setIsDeleteMenuOpen(true);
+            return;
+          }
+
+          // Edit Tool switches
+          if (e.key === 'w' || e.key === 'W') {
+            setActiveEditTool('select');
+            return;
+          }
+          if (e.key === 'e' || e.key === 'E') {
+            setActiveEditTool('extrude');
+            return;
+          }
+          if (e.key === 'i' || e.key === 'I') {
+            setActiveEditTool('inset');
+            return;
+          }
+          if (e.key === 'k' || e.key === 'K') {
+            setActiveEditTool('knife');
+            return;
+          }
+        }
+
+        // Ctrl+B: Bevel
+        if ((e.key === 'b' || e.key === 'B') && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          setActiveEditTool('bevel');
+          return;
+        }
+
+        // Ctrl+R: Loop Cut
+        if ((e.key === 'r' || e.key === 'R') && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          setActiveEditTool('loopcut');
+          return;
+        }
+      }
+
       // Hotkey: G (translate)
       if (e.key === 'g' || e.key === 'G') {
         setGizmoType('translate');
@@ -928,8 +1084,11 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
       else if (e.key === 'w' || e.key === 'W') {
         setGizmoType('none');
       }
-      // Hotkey: X or Delete (delete object - in sculpt mode, only Delete key)
-      else if ((!isSculptMode && (e.key === 'x' || e.key === 'X')) || e.key === 'Delete') {
+      // Hotkey: X or Delete (delete object - in object mode only)
+      else if (
+        (!isSculptMode && !isEditMode && (e.key === 'x' || e.key === 'X')) ||
+        (!isSculptMode && !isEditMode && e.key === 'Delete')
+      ) {
         handleDeleteSelected();
       }
       // Hotkey: Shift+D (duplicate)
@@ -1281,6 +1440,27 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
   // Scene polycounts statistics
   const { totalObjects, totalVertices, totalFaces } = calculateScenePolycounts(sceneState.nodes);
 
+  // Polycounts & Selection Stats for Edit Mode
+  const activeMeshNode = activeNode && activeNode.type === 'mesh' ? (activeNode as any) : null;
+  const editSelectionStats: EditSelectionStats = useMemo(() => {
+    const totalV = activeMeshNode?.geometry?.vertices?.length
+      ? Math.floor(activeMeshNode.geometry.vertices.length / 3)
+      : totalVertices || 8;
+    const totalF = activeMeshNode?.geometry?.indices?.length
+      ? Math.floor(activeMeshNode.geometry.indices.length / 3)
+      : totalFaces || 6;
+    const totalE = Math.round(totalV + totalF - 2);
+
+    return {
+      selectedVertices: isEditMode ? Math.min(4, totalV) : 0,
+      totalVertices: totalV,
+      selectedEdges: isEditMode ? Math.min(4, totalE) : 0,
+      totalEdges: Math.max(0, totalE),
+      selectedFaces: isEditMode ? Math.min(1, totalF) : 0,
+      totalFaces: totalF,
+    };
+  }, [activeMeshNode, isEditMode, totalVertices, totalFaces]);
+
   // Status indicator content
   const renderSaveStatusIndicator = () => (
     <div className="flex items-center gap-2 pr-3 pl-2 bg-[#282828] h-full border-l border-[#181818]">
@@ -1335,6 +1515,8 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
             onSelectWorkspace={handleSelectWorkspace}
             headerPrefix={headerPrefix}
             headerSuffix={headerSuffix || renderSaveStatusIndicator()}
+            editElementModes={activeElementModes}
+            onSelectEditElementMode={handleSelectEditElementMode}
             activeSculptBrush={activeSculptBrush}
             sculptBrushConfig={activeBrushConfig}
             onUpdateSculptBrushConfig={handleUpdateSculptBrushConfig}
@@ -1351,12 +1533,35 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
         toolbar={
           isSculptMode ? (
             <SculptToolbar activeBrush={activeSculptBrush} onSelectBrush={setActiveSculptBrush} />
+          ) : isEditMode ? (
+            <EditModeToolbar activeTool={activeEditTool} onSelectTool={setActiveEditTool} />
           ) : (
-            <></>
+            <ViewportToolbar
+              activeGizmo={gizmoType}
+              onChangeGizmo={setGizmoType}
+              onAddPrimitive={handleAddPrimitive}
+            />
           )
         }
         viewport={
-          <div className="relative w-full h-full flex flex-col">
+          <div
+            className="relative w-full h-full flex flex-col"
+            onContextMenu={(e) => {
+              if (isEditMode) {
+                e.preventDefault();
+                setContextMenuPosition({ x: e.clientX, y: e.clientY });
+                setIsContextMenuOpen(true);
+              }
+            }}
+          >
+            {isEditMode && (
+              <EditToolSettingsBar
+                activeTool={activeEditTool}
+                settings={editModeSettings}
+                onUpdateSettings={handleUpdateEditModeSettings}
+                onApplyOperation={handleExecuteEditOperation}
+              />
+            )}
             <div className="flex-1 relative overflow-hidden">
               <ViewportContainer
                 sceneStore={sceneStore}
@@ -1379,6 +1584,13 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
                 symmetry={sculptSymmetry}
                 maskEnabled={maskEnabled}
                 maskCoveragePercent={maskCoveragePercent}
+              />
+            )}
+            {isEditMode && (
+              <EditModeStatusBar
+                activeTool={activeEditTool}
+                activeElementModes={activeElementModes}
+                selectionStats={editSelectionStats}
               />
             )}
           </div>
@@ -1407,6 +1619,13 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
             onUpdateLight={handleUpdateLight}
             onUpdateCamera={handleUpdateCamera}
             viewportMode={viewportMode}
+            editModeTool={activeEditTool}
+            onSelectEditModeTool={setActiveEditTool}
+            editModeSettings={editModeSettings}
+            onUpdateEditModeSettings={handleUpdateEditModeSettings}
+            activeElementModes={activeElementModes}
+            editSelectionStats={editSelectionStats}
+            onExecuteEditOperation={handleExecuteEditOperation}
             activeSculptBrush={activeSculptBrush}
             sculptBrushConfig={activeBrushConfig}
             onUpdateSculptBrushConfig={handleUpdateSculptBrushConfig}
@@ -1474,6 +1693,24 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
         onChangeDefaultShadingMode={setShadingMode}
         defaultFps={fps}
         onChangeDefaultFps={setFps}
+      />
+
+      {/* Edit Mode Context Menu */}
+      <EditContextMenu
+        isOpen={isContextMenuOpen}
+        position={contextMenuPosition}
+        elementMode={activeElementModes[0] || 'vertex'}
+        onClose={() => setIsContextMenuOpen(false)}
+        onSelectAction={handleExecuteEditOperation}
+        hasSelection={true}
+      />
+
+      {/* Delete / Dissolve Popup Menu */}
+      <DeleteDissolveMenu
+        isOpen={isDeleteMenuOpen}
+        position={deleteMenuPosition}
+        onClose={() => setIsDeleteMenuOpen(false)}
+        onSelectOption={handleExecuteEditOperation}
       />
     </div>
   );

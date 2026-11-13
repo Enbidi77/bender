@@ -89,6 +89,24 @@ export interface FaceData {
  */
 export type EditElementMode = 'vertex' | 'edge' | 'face';
 
+/**
+ * Available interactive modeling tools in Edit Mode
+ */
+export type EditModeTool =
+  | 'select'
+  | 'cursor'
+  | 'move'
+  | 'rotate'
+  | 'scale'
+  | 'extrude'
+  | 'inset'
+  | 'bevel'
+  | 'loopcut'
+  | 'knife'
+  | 'polybuild'
+  | 'spin'
+  | 'smooth';
+
 export interface EditModeSelection {
   mode: EditElementMode;
   selectedIndices: number[];
@@ -103,13 +121,128 @@ export type MeshOperationType =
   | 'bevel'
   | 'inset'
   | 'delete'
+  | 'dissolve'
   | 'loopcut'
+  | 'knife-cut'
   | 'merge'
   | 'smooth'
-  | 'flip-normals';
+  | 'flip-normals'
+  | 'triangulate'
+  | 'bridge-loops'
+  | 'fill-loop'
+  | 'slide'
+  | 'create-edge'
+  | 'separate';
 
-export interface MeshOperation {
+export interface MeshOperation<TParams = Record<string, unknown>> {
   type: MeshOperationType;
   targetIndices: number[];
-  parameters: Record<string, unknown>;
+  parameters: TParams;
+}
+
+/**
+ * Operation-specific parameter definitions
+ */
+export interface ExtrudeOperationParams {
+  distance?: number;
+  direction?: Vector3;
+  individual?: boolean;
+}
+
+export interface InsetOperationParams {
+  thickness?: number;
+  depth?: number;
+  individual?: boolean;
+}
+
+export interface BevelOperationParams {
+  width?: number;
+  segments?: number;
+  mode?: 'edge' | 'vertex';
+  clampOverlap?: boolean;
+}
+
+export interface SubdivideOperationParams {
+  iterations?: number;
+  smoothness?: number;
+  cuts?: number;
+}
+
+export interface MergeOperationParams {
+  type?: 'center' | 'distance' | 'collapse';
+  distance?: number;
+}
+
+export interface DeleteOperationParams {
+  target?: 'vertices' | 'edges' | 'faces' | 'only-faces';
+}
+
+export interface DissolveOperationParams {
+  target?: 'vertices' | 'edges' | 'faces';
+}
+
+export interface LoopCutOperationParams {
+  edgeIndex?: number;
+  factor?: number; // 0 to 1 along edge
+  cuts?: number;
+}
+
+export interface KnifeCutOperationParams {
+  points?: Vector3[];
+  planeNormal?: Vector3;
+  planePoint?: Vector3;
+  v1?: number;
+  v2?: number;
+  edgeIndex?: number;
+  factor?: number;
+}
+
+export interface SlideOperationParams {
+  factor: number; // -1 to 1 or 0 to 1
+  edgeIndex?: number;
+  mode?: 'vertex' | 'edge';
+}
+
+/**
+ * Topology validation and invariant reporting
+ */
+export interface TopologyValidationIssue {
+  severity: 'error' | 'warning';
+  code:
+    | 'dangling-vertex'
+    | 'dangling-edge'
+    | 'degenerate-face'
+    | 'unreferenced-index'
+    | 'inconsistent-winding'
+    | 'non-manifold-edge'
+    | 'zero-area-face';
+  message: string;
+  elementIndices?: number[];
+  elementType?: EditElementMode;
+}
+
+export interface TopologyValidationResult {
+  isValid: boolean;
+  issues: TopologyValidationIssue[];
+}
+
+/**
+ * Geometric and topological statistics
+ */
+export interface TopologyStats {
+  vertexCount: number;
+  edgeCount: number;
+  faceCount: number;
+  triangleCount: number;
+  quadCount: number;
+  ngonCount: number;
+  boundaryEdgeCount: number;
+  nonManifoldEdgeCount: number;
+  surfaceArea: number;
+  boundingBox: {
+    min: Vector3;
+    max: Vector3;
+    size: Vector3;
+    center: Vector3;
+  };
 }

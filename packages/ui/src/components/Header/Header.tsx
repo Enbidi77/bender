@@ -9,8 +9,10 @@ import type {
   SculptBrushType,
   SculptBrushConfig,
   SymmetryConfig,
+  EditElementMode,
 } from '@blender-elt/contracts';
 import { SculptTopBar } from '../Sculpt/SculptTopBar.js';
+import { ElementModeSelector } from '../EditMode/ElementModeSelector.js';
 
 export interface HeaderProps {
   projectName?: string;
@@ -28,6 +30,8 @@ export interface HeaderProps {
   onSelectWorkspace?: (workspaceId: string) => void;
   headerPrefix?: React.ReactNode;
   headerSuffix?: React.ReactNode;
+  editElementModes?: EditElementMode[];
+  onSelectEditElementMode?: (mode: EditElementMode, isMultiSelect?: boolean) => void;
   activeSculptBrush?: SculptBrushType;
   sculptBrushConfig?: SculptBrushConfig;
   onUpdateSculptBrushConfig?: (updates: Partial<SculptBrushConfig>) => void;
@@ -58,6 +62,8 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectWorkspace,
   headerPrefix,
   headerSuffix,
+  editElementModes,
+  onSelectEditElementMode,
   activeSculptBrush,
   sculptBrushConfig,
   onUpdateSculptBrushConfig,
@@ -114,6 +120,15 @@ export const Header: React.FC<HeaderProps> = ({
               </option>
             </select>
           </div>
+        )}
+
+        {/* Edit Mode Element Selection Mode Buttons */}
+        {viewportMode === 'edit' && editElementModes && onSelectEditElementMode && (
+          <ElementModeSelector
+            activeModes={editElementModes}
+            onSelectMode={onSelectEditElementMode}
+            className="hidden md:flex ml-1"
+          />
         )}
 
         {/* Sculpt Mode Top-Bar Tool Controls */}

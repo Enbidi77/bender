@@ -13,6 +13,7 @@ import { SceneRenderer } from './renderer/SceneRenderer.js';
 import { SelectionHighlight } from './gizmos/SelectionHighlight.js';
 import { TransformGizmo } from './gizmos/TransformGizmo.js';
 import { SculptViewportLayer } from './sculpt/SculptViewportLayer.js';
+import { EditViewportLayer } from './edit/EditViewportLayer.js';
 
 export const ViewportCanvas: React.FC = () => {
   const { config, sceneStore } = useViewportContext();
@@ -61,6 +62,9 @@ export const ViewportCanvas: React.FC = () => {
 
       {/* Sculpt mode interactive input controller and 3D surface brush cursor */}
       <SculptViewportLayer />
+
+      {/* Edit mode sub-element picking, interactive modal tools, and visual overlays */}
+      <EditViewportLayer />
     </Canvas>
   );
 };

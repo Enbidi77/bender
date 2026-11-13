@@ -1,20 +1,340 @@
 import { useEffect, useRef } from 'react';
+import type { StoreApi } from 'zustand/vanilla';
 import type { SculptBrushType } from '@blender-elt/contracts';
 import { sculptStore } from '@blender-elt/sculpting';
+import type { SceneGraphState, SelectionStoreState } from '@blender-elt/scene-core';
 import { useViewportContext } from '../context/ViewportContext.js';
 import { useCameraControls } from './useCameraControls.js';
+import type {
+  ViewportState,
+  ViewportMode,
+  GizmoType,
+  ShadingMode,
+  AxisLock,
+  StandardViewpoint,
+} from '../types.js';
+
+export interface ViewportHotkeyHandlerContext {
+  config: ViewportState['config'];
+  sceneStore: StoreApi<SceneGraphState>;
+  selectionStore: StoreApi<SelectionStoreState>;
+  setMode: (mode: ViewportMode) => void;
+  setGizmoType: (type: GizmoType) => void;
+  setShadingMode: (mode: ShadingMode) => void;
+  axisLock: AxisLock;
+  setAxisLock: (axis: AxisLock) => void;
+  toggleAxisLock: (axis: 'X' | 'Y' | 'Z') => void;
+  focusSelection: () => void;
+  setStandardViewpoint: (view: StandardViewpoint) => void;
+  toggleCameraProjection: () => void;
+  toggleSnapping: () => void;
+}
+
+/**
+ * Pure handler for Viewport keyboard hotkeys
+ */
+export function handleViewportHotkeyEvent(
+  e: KeyboardEvent,
+  ctx: ViewportHotkeyHandlerContext,
+): boolean {
+  // Ignore if user is focused on an input element
+  const target = e.target as HTMLElement | null;
+  if (
+    target &&
+    (target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.tagName === 'SELECT' ||
+      target.isContentEditable)
+  ) {
+    return false;
+  }
+
+  const {
+    config,
+    sceneStore,
+    selectionStore,
+    setMode,
+    setGizmoType,
+    setShadingMode,
+    axisLock,
+    setAxisLock,
+    toggleAxisLock,
+    focusSelection,
+    setStandardViewpoint,
+    toggleCameraProjection,
+    toggleSnapping,
+  } = ctx;
+
+  const code = e.code;
+  const key = e.key ? e.key.toLowerCase() : '';
+  const isEditMode = config.mode === 'edit';
+  const hasActiveNode = Boolean(sceneStore.getState().activeNodeId);
+  const isTransformActive = config.gizmoType !== 'none' && hasActiveNode;
+
+  // 1. Edit Mode Hotkeys
+  if (isEditMode) {
+    // 1: Vertex selection mode
+    if (code === 'Digit1' && !e.altKey && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      if (e.shiftKey) {
+        selectionStore.getState().toggleEditElementMode('vertex');
+      } else {
+        selectionStore.getState().setEditElementModes(['vertex']);
+      }
+      return true;
+    }
+
+    // 2: Edge selection mode
+    if (code === 'Digit2' && !e.altKey && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      if (e.shiftKey) {
+        selectionStore.getState().toggleEditElementMode('edge');
+      } else {
+        selectionStore.getState().setEditElementModes(['edge']);
+      }
+      return true;
+    }
+
+    // 3: Face selection mode
+    if (code === 'Digit3' && !e.altKey && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      if (e.shiftKey) {
+        selectionStore.getState().toggleEditElementMode('face');
+      } else {
+        selectionStore.getState().setEditElementModes(['face']);
+      }
+      return true;
+    }
+
+    // E: Extrude selected elements
+    if (code === 'KeyE' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('blender-elt:edit-extrude'));
+      }
+      return true;
+    }
+
+    // I: Inset selected faces
+    if (code === 'KeyI' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('blender-elt:edit-inset'));
+      }
+      return true;
+    }
+
+    // Ctrl+B: Bevel selected edges/vertices
+    if (code === 'KeyB' && (e.ctrlKey || e.metaKey) && !e.altKey) {
+      e.preventDefault();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('blender-elt:edit-bevel'));
+      }
+      return true;
+    }
+
+    // Ctrl+R: Loop cut preview and commit
+    if (code === 'KeyR' && (e.ctrlKey || e.metaKey) && !e.altKey) {
+      e.preventDefault();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('blender-elt:edit-loopcut'));
+      }
+      return true;
+    }
+
+    // K: Knife tool activation and cutting
+    if (code === 'KeyK' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('blender-elt:edit-knife'));
+      }
+      return true;
+    }
+
+    // X or Delete: Delete action/prompt
+    if (
+      (code === 'KeyX' && !e.ctrlKey && !e.metaKey && !e.altKey && !isTransformActive) ||
+      code === 'Delete'
+    ) {
+      e.preventDefault();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('blender-elt:edit-delete'));
+      }
+      return true;
+    }
+  }
+
+  // Mode toggle: Tab key (toggle between 'object' and 'edit' mode on active mesh)
+  if (code === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    e.preventDefault();
+    if (config.mode === 'edit') {
+      setMode('object');
+    } else {
+      const activeNodeId = sceneStore.getState().activeNodeId;
+      if (activeNodeId) {
+        const node = sceneStore.getState().getNodeById(activeNodeId);
+        if (node && node.type === 'mesh') {
+          setMode('edit');
+        }
+      }
+    }
+    return true;
+  }
+
+  // A: Select All, Alt+A: Deselect All
+  if (code === 'KeyA' && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    if (e.altKey) {
+      if (isEditMode) {
+        selectionStore.getState().deselectAllEditElements();
+      } else {
+        sceneStore.getState().deselectAll();
+      }
+    } else {
+      if (isEditMode) {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('blender-elt:edit-select-all'));
+        }
+      } else {
+        const allNodeIds = Object.keys(sceneStore.getState().nodes);
+        sceneStore.getState().selectMultiple(allNodeIds);
+        selectionStore.getState().selectMultipleObjects(allNodeIds);
+      }
+    }
+    return true;
+  }
+
+  // Standard Blender Navigation & Gizmo Hotkeys
+  if (code === 'KeyG' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault();
+    setGizmoType('translate');
+    if (isEditMode && typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('blender-elt:edit-modal-transform', {
+          detail: { type: 'translate' },
+        }),
+      );
+    }
+    return true;
+  } else if (code === 'KeyR' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault();
+    setGizmoType('rotate');
+    if (isEditMode && typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('blender-elt:edit-modal-transform', {
+          detail: { type: 'rotate' },
+        }),
+      );
+    }
+    return true;
+  } else if (code === 'KeyS' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault();
+    setGizmoType('scale');
+    if (isEditMode && typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('blender-elt:edit-modal-transform', {
+          detail: { type: 'scale' },
+        }),
+      );
+    }
+    return true;
+  }
+
+  // Axis Locking hotkeys (X, Y, Z) to constrain transformations
+  if (code === 'KeyX' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+    if (isTransformActive) {
+      e.preventDefault();
+      toggleAxisLock('X');
+      return true;
+    }
+  } else if (code === 'KeyY' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+    if (isTransformActive) {
+      e.preventDefault();
+      toggleAxisLock('Y');
+      return true;
+    }
+  } else if (code === 'KeyZ' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    if (e.shiftKey) {
+      e.preventDefault();
+      setShadingMode(config.shadingMode === 'wireframe' ? 'solid' : 'wireframe');
+      return true;
+    } else if (isTransformActive) {
+      e.preventDefault();
+      toggleAxisLock('Z');
+      return true;
+    } else {
+      e.preventDefault();
+      setShadingMode(config.shadingMode === 'wireframe' ? 'solid' : 'wireframe');
+      return true;
+    }
+  }
+
+  // Escape clears axis constraint
+  if (code === 'Escape') {
+    if (axisLock !== null) {
+      e.preventDefault();
+      setAxisLock(null);
+      return true;
+    }
+  }
+
+  // Camera framing: F (in non-sculpt mode) or Numpad Decimal or Period
+  if (config.mode !== 'sculpt' && code === 'KeyF') {
+    e.preventDefault();
+    focusSelection();
+    return true;
+  } else if (code === 'NumpadDecimal' || key === '.') {
+    e.preventDefault();
+    focusSelection();
+    return true;
+  }
+
+  // Snapping toggle: Shift + Tab
+  if (code === 'Tab' && e.shiftKey) {
+    e.preventDefault();
+    toggleSnapping();
+    return true;
+  }
+
+  // Standard viewpoints via Numpad
+  if (code === 'Numpad1' || (code === 'Digit1' && e.altKey)) {
+    e.preventDefault();
+    setStandardViewpoint(e.ctrlKey ? 'back' : 'front');
+    return true;
+  } else if (code === 'Numpad3' || (code === 'Digit3' && e.altKey)) {
+    e.preventDefault();
+    setStandardViewpoint(e.ctrlKey ? 'left' : 'right');
+    return true;
+  } else if (code === 'Numpad7' || (code === 'Digit7' && e.altKey)) {
+    e.preventDefault();
+    setStandardViewpoint(e.ctrlKey ? 'bottom' : 'top');
+    return true;
+  } else if (code === 'Numpad5' || (code === 'Digit5' && e.altKey)) {
+    e.preventDefault();
+    toggleCameraProjection();
+    return true;
+  } else if (code === 'Numpad0' || (code === 'Digit0' && e.altKey)) {
+    e.preventDefault();
+    setStandardViewpoint('camera');
+    return true;
+  }
+
+  return false;
+}
 
 export function useViewportHotkeys(enabled = true) {
   const {
     setGizmoType,
     setShadingMode,
     config,
+    setMode,
     toggleCameraProjection,
     toggleSnapping,
     axisLock,
     setAxisLock,
     toggleAxisLock,
     sceneStore,
+    selectionStore,
     setIsSculptModalActive,
   } = useViewportContext();
 
@@ -116,9 +436,6 @@ export function useViewportHotkeys(enabled = true) {
       }
 
       const code = e.code;
-      const key = e.key.toLowerCase();
-      const hasActiveNode = Boolean(sceneStore.getState().activeNodeId);
-      const isTransformActive = config.gizmoType !== 'none' && hasActiveNode;
 
       // 1. Sculpt Mode Hotkeys
       if (isSculptMode) {
@@ -154,82 +471,21 @@ export function useViewportHotkeys(enabled = true) {
         }
       }
 
-      // 2. Standard Blender Navigation & Gizmo Hotkeys
-      if (code === 'KeyG' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        e.preventDefault();
-        setGizmoType('translate');
-      } else if (code === 'KeyR' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        e.preventDefault();
-        setGizmoType('rotate');
-      } else if (code === 'KeyS' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        e.preventDefault();
-        setGizmoType('scale');
-      }
-
-      // Axis Locking hotkeys (X, Y, Z) to constrain transformations
-      if (code === 'KeyX' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
-        if (isTransformActive) {
-          e.preventDefault();
-          toggleAxisLock('X');
-        }
-      } else if (code === 'KeyY' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
-        if (isTransformActive) {
-          e.preventDefault();
-          toggleAxisLock('Y');
-        }
-      } else if (code === 'KeyZ' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        if (e.shiftKey) {
-          e.preventDefault();
-          setShadingMode(config.shadingMode === 'wireframe' ? 'solid' : 'wireframe');
-        } else if (isTransformActive) {
-          e.preventDefault();
-          toggleAxisLock('Z');
-        } else {
-          e.preventDefault();
-          setShadingMode(config.shadingMode === 'wireframe' ? 'solid' : 'wireframe');
-        }
-      }
-
-      // Escape clears axis constraint
-      if (code === 'Escape') {
-        if (axisLock !== null) {
-          e.preventDefault();
-          setAxisLock(null);
-        }
-      }
-
-      // Camera framing: F (in non-sculpt mode) or Numpad Decimal or Period
-      if (!isSculptMode && code === 'KeyF') {
-        e.preventDefault();
-        focusSelection();
-      } else if (code === 'NumpadDecimal' || key === '.') {
-        e.preventDefault();
-        focusSelection();
-      }
-
-      // Snapping toggle: Shift + Tab
-      if (code === 'Tab' && e.shiftKey) {
-        e.preventDefault();
-        toggleSnapping();
-      }
-
-      // Standard viewpoints via Numpad
-      if (code === 'Numpad1' || (code === 'Digit1' && e.altKey)) {
-        e.preventDefault();
-        setStandardViewpoint(e.ctrlKey ? 'back' : 'front');
-      } else if (code === 'Numpad3' || (code === 'Digit3' && e.altKey)) {
-        e.preventDefault();
-        setStandardViewpoint(e.ctrlKey ? 'left' : 'right');
-      } else if (code === 'Numpad7' || (code === 'Digit7' && e.altKey)) {
-        e.preventDefault();
-        setStandardViewpoint(e.ctrlKey ? 'bottom' : 'top');
-      } else if (code === 'Numpad5' || (code === 'Digit5' && e.altKey)) {
-        e.preventDefault();
-        toggleCameraProjection();
-      } else if (code === 'Numpad0' || (code === 'Digit0' && e.altKey)) {
-        e.preventDefault();
-        setStandardViewpoint('camera');
-      }
+      handleViewportHotkeyEvent(e, {
+        config,
+        sceneStore,
+        selectionStore,
+        setMode,
+        setGizmoType,
+        setShadingMode,
+        axisLock,
+        setAxisLock,
+        toggleAxisLock,
+        focusSelection,
+        setStandardViewpoint,
+        toggleCameraProjection,
+        toggleSnapping,
+      });
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -296,11 +552,13 @@ export function useViewportHotkeys(enabled = true) {
     config.shadingMode,
     config.gizmoType,
     axisLock,
+    setMode,
     setGizmoType,
     setShadingMode,
     setAxisLock,
     toggleAxisLock,
     sceneStore,
+    selectionStore,
     focusSelection,
     setStandardViewpoint,
     toggleCameraProjection,

@@ -34,8 +34,15 @@ import type {
   SymmetryConfig,
   SculptMaskOperation,
   VoxelRemeshConfig,
+  EditModeTool,
+  EditElementMode,
 } from '@blender-elt/contracts';
 import { BrushSettingsPanel, SymmetryPanel, MaskingPanel, RemeshPanel } from '../Sculpt/index.js';
+import {
+  EditToolSettingsPanel,
+  type EditModeSettings,
+  type EditSelectionStats,
+} from '../EditMode/index.js';
 
 export interface PropertiesPanelProps {
   node: SceneNode | null;
@@ -50,6 +57,13 @@ export interface PropertiesPanelProps {
   onUpdateLight?: (nodeId: string, updates: Partial<LightNode>) => void;
   onUpdateCamera?: (nodeId: string, updates: Partial<CameraNode>) => void;
   viewportMode?: ViewportMode;
+  editModeTool?: EditModeTool;
+  onSelectEditModeTool?: (tool: EditModeTool) => void;
+  editModeSettings?: EditModeSettings;
+  onUpdateEditModeSettings?: (updates: Partial<EditModeSettings>) => void;
+  activeElementModes?: EditElementMode[];
+  editSelectionStats?: EditSelectionStats;
+  onExecuteEditOperation?: (opType: string, params?: Record<string, unknown>) => void;
   activeSculptBrush?: SculptBrushType;
   sculptBrushConfig?: SculptBrushConfig;
   onUpdateSculptBrushConfig?: (updates: Partial<SculptBrushConfig>) => void;
@@ -100,6 +114,13 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   onUpdateLight,
   onUpdateCamera,
   viewportMode = 'object',
+  editModeTool = 'select',
+  onSelectEditModeTool,
+  editModeSettings,
+  onUpdateEditModeSettings,
+  activeElementModes,
+  editSelectionStats,
+  onExecuteEditOperation,
   sculptBrushConfig,
   onUpdateSculptBrushConfig,
   sculptStrokeSettings,
@@ -118,11 +139,11 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
 }) => {
   const [selectedPreset, setSelectedPreset] = useState<string>('default-clay');
   const [activeTab, setActiveTab] = useState<'tool' | 'object' | 'material'>(
-    viewportMode === 'sculpt' ? 'tool' : 'object',
+    viewportMode === 'sculpt' || viewportMode === 'edit' ? 'tool' : 'object',
   );
 
   useEffect(() => {
-    if (viewportMode === 'sculpt') {
+    if (viewportMode === 'sculpt' || viewportMode === 'edit') {
       setActiveTab('tool');
     }
   }, [viewportMode]);
@@ -210,10 +231,20 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
         </button>
       </div>
 
-      {/* TAB 1: TOOL (Sculpting Settings) */}
+      {/* TAB 1: TOOL (Sculpting / Edit Mode Settings) */}
       {activeTab === 'tool' && (
         <div className="p-2 space-y-2">
-          {sculptBrushConfig && onUpdateSculptBrushConfig ? (
+          {viewportMode === 'edit' && editModeSettings && onUpdateEditModeSettings ? (
+            <EditToolSettingsPanel
+              activeTool={editModeTool}
+              onSelectTool={onSelectEditModeTool}
+              settings={editModeSettings}
+              onUpdateSettings={onUpdateEditModeSettings}
+              activeElementModes={activeElementModes}
+              selectionStats={editSelectionStats}
+              onExecuteOperation={onExecuteEditOperation}
+            />
+          ) : sculptBrushConfig && onUpdateSculptBrushConfig ? (
             <>
               {/* Brush Settings */}
               <Accordion
@@ -271,10 +302,9 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
           ) : (
             <div className="flex flex-col items-center justify-center p-6 text-center text-gray-500 text-xs">
               <Paintbrush size={24} className="mb-2 opacity-30 text-gray-400" />
-              <p className="font-semibold text-gray-400">Sculpt Tool Settings</p>
+              <p className="font-semibold text-gray-400">Tool Settings</p>
               <p className="text-[11px] mt-1 text-gray-500">
-                Switch to Sculpt Mode to access brush parameters, symmetry, masking, and voxel
-                remeshing.
+                Switch to Edit or Sculpt Mode to access active tool parameters and operations.
               </p>
             </div>
           )}

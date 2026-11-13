@@ -6,10 +6,67 @@ import type {
   FaceData,
   EditElementMode,
   Vector3,
+  TopologyValidationResult,
+  TopologyStats,
 } from '@blender-elt/contracts';
+import {
+  buildAdjacency,
+  getBoundaryEdges,
+  getBoundaryLoops,
+  getNonManifoldEdges,
+  getConnectedVertices,
+  getConnectedFaces,
+  verticesToEdges,
+  edgesToFaces,
+  facesToVertices,
+  facesToEdges,
+  growSelection,
+  shrinkSelection,
+  type TopologyAdjacency,
+} from './adjacency.js';
+import {
+  computeFaceNormal,
+  computeFaceCentroid,
+  computeFaceArea,
+  computeMeshSurfaceArea,
+  computeEdgeLength,
+  computeEdgeMidpoint,
+} from './geometry-calc.js';
+import { validateTopology, getTopologyStats } from './validation.js';
+import {
+  mergeVerticesAtCenter,
+  mergeVerticesByDistance,
+  smoothVertices,
+  deleteVertices,
+  dissolveVertices,
+  slideVertex,
+  reindexTopology,
+} from './vertex-ops.js';
+import {
+  createEdgeBetweenVertices,
+  subdivideEdges,
+  getEdgeLoop,
+  getEdgeRing,
+  dissolveEdges,
+  deleteEdges,
+  slideEdge,
+} from './edge-ops.js';
+import {
+  extrudeFacesRegion,
+  extrudeFacesIndividual,
+  insetFaces,
+  triangulateFaces,
+  flipNormals,
+  deleteFaces,
+  dissolveFaces,
+  fillBoundaryLoop,
+  bridgeEdgeLoops,
+  bevelElements,
+} from './face-ops.js';
+import { loopCut, knifeSplitEdge, knifeSplitFace } from './topology-tools.js';
 
 /**
- * Robust Mesh Topology data structure for editing and geometry queries
+ * Robust Mesh Topology data structure for editing, geometry queries, and advanced modeling operations
  */
 export class MeshTopology {
   public vertices: VertexData[] = [];
@@ -22,6 +79,9 @@ export class MeshTopology {
     this.edges = edges;
     this.faces = faces;
     if (faces.length > 0) {
+      if (this.edges.length === 0) {
+        this.rebuildEdges();
+      }
       this.computeFaceNormals();
       this.computeVertexNormals();
     }
@@ -129,9 +189,7 @@ export class MeshTopology {
       }
     }
 
-    const topology = new MeshTopology(vertices, Array.from(edgeMap.values()), faces);
-
-    return topology;
+    return new MeshTopology(vertices, Array.from(edgeMap.values()), faces);
   }
 
   /**
@@ -187,50 +245,16 @@ export class MeshTopology {
   }
 
   /**
-   * Computes face normals from vertex positions
+   * Computes face normals from vertex positions using Newell's method
    */
   public computeFaceNormals(): void {
     this.faceNormals = new Array(this.faces.length);
 
-    const vA = new THREE.Vector3();
-    const vB = new THREE.Vector3();
-    const vC = new THREE.Vector3();
-    const cb = new THREE.Vector3();
-    const ab = new THREE.Vector3();
-
     for (let i = 0; i < this.faces.length; i++) {
       const face = this.faces[i];
-      const vi = face.vertexIndices;
-      if (vi.length >= 3) {
-        const p0 = this.vertices[vi[0]]?.position;
-        const p1 = this.vertices[vi[1]]?.position;
-        const p2 = this.vertices[vi[2]]?.position;
-
-        if (p0 && p1 && p2) {
-          vA.set(p0.x, p0.y, p0.z);
-          vB.set(p1.x, p1.y, p1.z);
-          vC.set(p2.x, p2.y, p2.z);
-
-          cb.subVectors(vC, vB);
-          ab.subVectors(vA, vB);
-          cb.cross(ab);
-
-          if (cb.lengthSq() > 0) {
-            cb.normalize();
-          } else {
-            cb.set(0, 1, 0);
-          }
-
-          const normal: Vector3 = { x: cb.x, y: cb.y, z: cb.z };
-          face.normal = normal;
-          this.faceNormals[i] = normal;
-          continue;
-        }
-      }
-
-      const defaultNorm: Vector3 = { x: 0, y: 1, z: 0 };
-      face.normal = defaultNorm;
-      this.faceNormals[i] = defaultNorm;
+      const normal = computeFaceNormal(face.vertexIndices, this.vertices);
+      face.normal = normal;
+      this.faceNormals[i] = normal;
     }
   }
 
@@ -266,39 +290,123 @@ export class MeshTopology {
    * Rebuilds unique edge map and links faces to their edges
    */
   public rebuildEdges(): void {
-    const edgeMap = new Map<string, EdgeData>();
-    let edgeIndexCounter = 0;
+    const reindexed = reindexTopology(this.vertices, this.edges, this.faces);
+    this.vertices = reindexed.vertices;
+    this.edges = reindexed.edges;
+    this.faces = reindexed.faces;
+  }
 
-    const getOrAddEdge = (v1: number, v2: number): number => {
-      const minV = Math.min(v1, v2);
-      const maxV = Math.max(v1, v2);
-      const key = `${minV}_${maxV}`;
-      const existing = edgeMap.get(key);
-      if (existing) {
-        return existing.index;
-      }
-      const newEdge: EdgeData = {
-        index: edgeIndexCounter++,
-        v1: minV,
-        v2: maxV,
-        selected: false,
-      };
-      edgeMap.set(key, newEdge);
-      return newEdge.index;
-    };
+  // --- Adjacency & Traversal Queries ---
 
-    for (const face of this.faces) {
-      const vi = face.vertexIndices;
-      const edgeIndices: number[] = [];
-      const count = vi.length;
-      for (let i = 0; i < count; i++) {
-        const next = (i + 1) % count;
-        edgeIndices.push(getOrAddEdge(vi[i], vi[next]));
-      }
-      face.edgeIndices = edgeIndices;
-    }
+  public getAdjacency(): TopologyAdjacency {
+    return buildAdjacency(this.vertices, this.edges, this.faces);
+  }
 
-    this.edges = Array.from(edgeMap.values());
+  public getBoundaryEdges(): EdgeData[] {
+    const adj = this.getAdjacency();
+    return getBoundaryEdges(this.edges, adj.edgeToFaces);
+  }
+
+  public getBoundaryLoops(): number[][] {
+    const adj = this.getAdjacency();
+    return getBoundaryLoops(this.edges, adj.edgeToFaces, this.vertices);
+  }
+
+  public getNonManifoldEdges(): EdgeData[] {
+    const adj = this.getAdjacency();
+    return getNonManifoldEdges(this.edges, adj.edgeToFaces);
+  }
+
+  public getConnectedVertices(startVertexIndex: number): number[] {
+    const adj = this.getAdjacency();
+    return getConnectedVertices(startVertexIndex, adj.vertexToEdges, this.edges);
+  }
+
+  public getConnectedFaces(startFaceIndex: number): number[] {
+    const adj = this.getAdjacency();
+    return getConnectedFaces(startFaceIndex, adj.faceToEdges, adj.edgeToFaces);
+  }
+
+  // --- Selection Conversion Helpers ---
+
+  public verticesToEdges(vertexIndices?: number[]): number[] {
+    const targets = vertexIndices ?? this.getSelectedVertexIndices();
+    return verticesToEdges(targets, this.edges);
+  }
+
+  public edgesToFaces(edgeIndices?: number[]): number[] {
+    const targets = edgeIndices ?? this.getSelectedEdgeIndices();
+    return edgesToFaces(targets, this.faces);
+  }
+
+  public facesToVertices(faceIndices?: number[]): number[] {
+    const targets = faceIndices ?? this.getSelectedFaceIndices();
+    return facesToVertices(targets, this.faces);
+  }
+
+  public facesToEdges(faceIndices?: number[]): number[] {
+    const targets = faceIndices ?? this.getSelectedFaceIndices();
+    return facesToEdges(targets, this.faces);
+  }
+
+  public growSelection(mode: EditElementMode): number[] {
+    const current = this.getSelection(mode);
+    const adj = this.getAdjacency();
+    const grown = growSelection(mode, current, adj, this.edges, this.faces);
+    this.setSelection(mode, grown);
+    return grown;
+  }
+
+  public shrinkSelection(mode: EditElementMode): number[] {
+    const current = this.getSelection(mode);
+    const adj = this.getAdjacency();
+    const shrunk = shrinkSelection(mode, current, adj, this.edges, this.faces);
+    this.setSelection(mode, shrunk);
+    return shrunk;
+  }
+
+  // --- Validation and Statistics ---
+
+  public validate(): TopologyValidationResult {
+    return validateTopology(this.vertices, this.edges, this.faces);
+  }
+
+  public getStats(): TopologyStats {
+    return getTopologyStats(this.vertices, this.edges, this.faces);
+  }
+
+  public getFaceNormal(faceIndex: number): Vector3 {
+    const face = this.faces[faceIndex];
+    if (!face) return { x: 0, y: 1, z: 0 };
+    return computeFaceNormal(face.vertexIndices, this.vertices);
+  }
+
+  public getFaceCentroid(faceIndex: number): Vector3 {
+    const face = this.faces[faceIndex];
+    if (!face) return { x: 0, y: 0, z: 0 };
+    return computeFaceCentroid(face.vertexIndices, this.vertices);
+  }
+
+  public getFaceArea(faceIndex: number): number {
+    const face = this.faces[faceIndex];
+    if (!face) return 0;
+    return computeFaceArea(face.vertexIndices, this.vertices);
+  }
+
+  public getSurfaceArea(): number {
+    return computeMeshSurfaceArea(this.faces, this.vertices);
+  }
+
+  public getEdgeLength(edgeIndex: number): number {
+    const edge = this.edges[edgeIndex];
+    if (!edge) return 0;
+    return computeEdgeLength(edge, this.vertices);
+  }
+
+  public getEdgeMidpoint(edgeIndex: number): Vector3 {
+    const edge = this.edges[edgeIndex];
+    if (!edge) return { x: 0, y: 0, z: 0 };
+    return computeEdgeMidpoint(edge, this.vertices);
   }
 
   // --- Selection Operations ---
@@ -410,9 +518,6 @@ export class MeshTopology {
 
   // --- Transformation Operations ---
 
-  /**
-   * Applies translation to specified vertices
-   */
   public translateVertices(vertexIndices: number[], delta: Vector3): void {
     for (const idx of vertexIndices) {
       const v = this.vertices[idx];
@@ -426,9 +531,6 @@ export class MeshTopology {
     this.computeVertexNormals();
   }
 
-  /**
-   * Scales specified vertices relative to an origin (default: center of selected vertices)
-   */
   public scaleVertices(vertexIndices: number[], scale: Vector3, origin?: Vector3): void {
     const center = origin ?? this.getCentroid(vertexIndices);
     for (const idx of vertexIndices) {
@@ -443,9 +545,6 @@ export class MeshTopology {
     this.computeVertexNormals();
   }
 
-  /**
-   * Rotates specified vertices by Euler angles (in radians) about an origin
-   */
   public rotateVertices(vertexIndices: number[], anglesRad: Vector3, origin?: Vector3): void {
     const center = origin ?? this.getCentroid(vertexIndices);
     const euler = new THREE.Euler(anglesRad.x, anglesRad.y, anglesRad.z, 'XYZ');
@@ -466,9 +565,6 @@ export class MeshTopology {
     this.computeVertexNormals();
   }
 
-  /**
-   * General transform on vertex group
-   */
   public transformVertices(
     vertexIndices: number[],
     transform: {
@@ -489,144 +585,330 @@ export class MeshTopology {
     }
   }
 
-  /**
-   * Computes the geometric centroid of specified vertices
-   */
-  public getCentroid(vertexIndices: number[]): Vector3 {
-    if (vertexIndices.length === 0) {
-      return { x: 0, y: 0, z: 0 };
-    }
-    let sx = 0;
-    let sy = 0;
-    let sz = 0;
-    let count = 0;
-    for (const idx of vertexIndices) {
-      const v = this.vertices[idx];
-      if (v) {
-        sx += v.position.x;
-        sy += v.position.y;
-        sz += v.position.z;
-        count++;
-      }
-    }
-    if (count === 0) return { x: 0, y: 0, z: 0 };
-    return { x: sx / count, y: sy / count, z: sz / count };
+  public getCentroid(vertexIndices?: number[]): Vector3 {
+    const targets = vertexIndices ?? this.getSelectedVertexIndices();
+    return computeFaceCentroid(
+      targets.length > 0 ? targets : this.vertices.map((v) => v.index),
+      this.vertices,
+    );
   }
 
-  // --- Edit Mode Operations: Extrude & Subdivide ---
+  // --- Core & Advanced Modeling Operations ---
 
-  /**
-   * Extrudes a single face along its normal (or custom direction) by a given distance
-   */
+  // Face Extrusion
   public extrudeFace(
     faceIndex: number,
     distance: number,
     customDirection?: Vector3,
   ): { newFaceIndices: number[]; newVertexIndices: number[] } {
-    const face = this.faces[faceIndex];
-    if (!face) {
-      return { newFaceIndices: [], newVertexIndices: [] };
-    }
-
-    const normal = customDirection ?? face.normal ?? { x: 0, y: 1, z: 0 };
-
-    const offset: Vector3 = {
-      x: normal.x * distance,
-      y: normal.y * distance,
-      z: normal.z * distance,
-    };
-
-    const origVertices = [...face.vertexIndices];
-    const newVertexIndices: number[] = [];
-
-    // Create duplicate extruded vertices
-    for (const vi of origVertices) {
-      const v = this.vertices[vi];
-      const newIndex = this.vertices.length;
-      this.vertices.push({
-        index: newIndex,
-        position: {
-          x: v.position.x + offset.x,
-          y: v.position.y + offset.y,
-          z: v.position.z + offset.z,
-        },
-        normal: { ...normal },
-        uv: v.uv ? [...v.uv] : undefined,
-        selected: true,
-      });
-      newVertexIndices.push(newIndex);
-    }
-
-    // Replace original face's vertices with the top extruded vertices
-    face.vertexIndices = [...newVertexIndices];
-    face.selected = true;
-
-    const newFaceIndices: number[] = [face.index];
-
-    // For each perimeter edge of the face, build side quad (two triangles)
-    const count = origVertices.length;
-    for (let i = 0; i < count; i++) {
-      const next = (i + 1) % count;
-      const v0 = origVertices[i];
-      const v1 = origVertices[next];
-      const nv0 = newVertexIndices[i];
-      const nv1 = newVertexIndices[next];
-
-      // Side quad consists of [v0, v1, nv1, nv0]
-      // Triangulated into [v0, v1, nv1] and [v0, nv1, nv0]
-      const sideFace1: FaceData = {
-        index: this.faces.length,
-        vertexIndices: [v0, v1, nv1],
-        selected: false,
-      };
-      this.faces.push(sideFace1);
-      newFaceIndices.push(sideFace1.index);
-
-      const sideFace2: FaceData = {
-        index: this.faces.length,
-        vertexIndices: [v0, nv1, nv0],
-        selected: false,
-      };
-      this.faces.push(sideFace2);
-      newFaceIndices.push(sideFace2.index);
-    }
-
-    this.rebuildEdges();
+    const result = extrudeFacesRegion(
+      this.vertices,
+      this.edges,
+      this.faces,
+      [faceIndex],
+      distance,
+      customDirection,
+    );
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
     this.computeFaceNormals();
     this.computeVertexNormals();
-
     return {
-      newFaceIndices,
-      newVertexIndices,
+      newFaceIndices: result.newFaceIndices,
+      newVertexIndices: result.newVertexIndices,
     };
   }
 
-  /**
-   * Extrudes all currently selected faces
-   */
-  public extrudeSelectedFaces(distance: number): {
-    newFaceIndices: number[];
-    newVertexIndices: number[];
-  } {
-    const selectedFaceIndices = this.getSelectedFaceIndices();
-    const resultNewFaces: number[] = [];
-    const resultNewVerts: number[] = [];
+  public extrudeFacesRegion(
+    faceIndices: number[],
+    distance: number,
+    customDirection?: Vector3,
+  ): { newFaceIndices: number[]; newVertexIndices: number[] } {
+    const result = extrudeFacesRegion(
+      this.vertices,
+      this.edges,
+      this.faces,
+      faceIndices,
+      distance,
+      customDirection,
+    );
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+    return {
+      newFaceIndices: result.newFaceIndices,
+      newVertexIndices: result.newVertexIndices,
+    };
+  }
 
-    for (const fIdx of selectedFaceIndices) {
-      const { newFaceIndices, newVertexIndices } = this.extrudeFace(fIdx, distance);
-      resultNewFaces.push(...newFaceIndices);
-      resultNewVerts.push(...newVertexIndices);
+  public extrudeFacesIndividual(
+    faceIndices: number[],
+    distance: number,
+    customDirection?: Vector3,
+  ): { newFaceIndices: number[]; newVertexIndices: number[] } {
+    const result = extrudeFacesIndividual(
+      this.vertices,
+      this.edges,
+      this.faces,
+      faceIndices,
+      distance,
+      customDirection,
+    );
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+    return {
+      newFaceIndices: result.newFaceIndices,
+      newVertexIndices: result.newVertexIndices,
+    };
+  }
+
+  public extrudeSelectedFaces(
+    distance: number,
+    options?: { individual?: boolean; direction?: Vector3 },
+  ): { newFaceIndices: number[]; newVertexIndices: number[] } {
+    const selectedFaces = this.getSelectedFaceIndices();
+    if (options?.individual) {
+      return this.extrudeFacesIndividual(selectedFaces, distance, options?.direction);
     }
+    return this.extrudeFacesRegion(selectedFaces, distance, options?.direction);
+  }
 
+  // Face Inset
+  public insetFaces(
+    faceIndices?: number[],
+    thickness: number = 0.2,
+    depth: number = 0,
+    individual: boolean = true,
+  ): { newFaceIndices: number[]; newVertexIndices: number[] } {
+    const targets = faceIndices ?? this.getSelectedFaceIndices();
+    const result = insetFaces(
+      this.vertices,
+      this.edges,
+      this.faces,
+      targets,
+      thickness,
+      depth,
+      individual,
+    );
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
     return {
-      newFaceIndices: resultNewFaces,
-      newVertexIndices: resultNewVerts,
+      newFaceIndices: result.newFaceIndices,
+      newVertexIndices: result.newVertexIndices,
     };
   }
 
-  /**
-   * Subdivides the mesh by splitting each triangle face into 4 smaller triangles
-   */
+  // Bevel
+  public bevelEdges(
+    edgeIndices?: number[],
+    width: number = 0.2,
+    segments: number = 1,
+  ): { newFaceIndices: number[]; newVertexIndices: number[] } {
+    const targets = edgeIndices ?? this.getSelectedEdgeIndices();
+    const result = bevelElements(
+      this.vertices,
+      this.edges,
+      this.faces,
+      targets,
+      'edge',
+      width,
+      segments,
+    );
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+    return {
+      newFaceIndices: result.newFaceIndices,
+      newVertexIndices: result.newVertexIndices,
+    };
+  }
+
+  public bevelVertices(
+    vertexIndices?: number[],
+    width: number = 0.2,
+    segments: number = 1,
+  ): { newFaceIndices: number[]; newVertexIndices: number[] } {
+    const targets = vertexIndices ?? this.getSelectedVertexIndices();
+    const result = bevelElements(
+      this.vertices,
+      this.edges,
+      this.faces,
+      targets,
+      'vertex',
+      width,
+      segments,
+    );
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+    return {
+      newFaceIndices: result.newFaceIndices,
+      newVertexIndices: result.newVertexIndices,
+    };
+  }
+
+  // Triangulation & Normals
+  public triangulateFaces(faceIndices?: number[]): { newFaceIndices: number[] } {
+    const result = triangulateFaces(this.vertices, this.edges, this.faces, faceIndices);
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+    return { newFaceIndices: result.newFaceIndices };
+  }
+
+  public flipNormals(faceIndices?: number[]): void {
+    const targets = faceIndices ?? this.getSelectedFaceIndices();
+    flipNormals(this.faces, targets.length > 0 ? targets : undefined);
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+  }
+
+  // Face Deletion & Dissolve
+  public deleteFaces(faceIndices?: number[], deleteUnreferencedVertices: boolean = true): void {
+    const targets = faceIndices ?? this.getSelectedFaceIndices();
+    const result = deleteFaces(
+      this.vertices,
+      this.edges,
+      this.faces,
+      targets,
+      deleteUnreferencedVertices,
+    );
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+  }
+
+  public dissolveFaces(faceIndices?: number[]): void {
+    const targets = faceIndices ?? this.getSelectedFaceIndices();
+    const result = dissolveFaces(this.vertices, this.edges, this.faces, targets);
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+  }
+
+  // Boundary Fill & Bridge
+  public fillBoundaryLoop(loopVertexIndices: number[]): number {
+    const result = fillBoundaryLoop(this.vertices, this.edges, this.faces, loopVertexIndices);
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+    return result.newFaceIndices[0] ?? -1;
+  }
+
+  public bridgeEdgeLoops(loopA: number[], loopB: number[]): number[] {
+    const result = bridgeEdgeLoops(this.vertices, this.edges, this.faces, loopA, loopB);
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+    return result.newFaceIndices;
+  }
+
+  // Vertex Operations
+  public mergeVerticesAtCenter(vertexIndices?: number[]): void {
+    const targets = vertexIndices ?? this.getSelectedVertexIndices();
+    const result = mergeVerticesAtCenter(this.vertices, this.edges, this.faces, targets);
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+  }
+
+  public mergeVerticesByDistance(distanceThreshold: number, vertexIndices?: number[]): void {
+    const targets = vertexIndices ?? this.getSelectedVertexIndices();
+    const result = mergeVerticesByDistance(
+      this.vertices,
+      this.edges,
+      this.faces,
+      distanceThreshold,
+      targets.length > 0 ? targets : undefined,
+    );
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+  }
+
+  public smoothVertices(
+    vertexIndices?: number[],
+    factor: number = 0.5,
+    iterations: number = 1,
+  ): void {
+    const targets = vertexIndices ?? this.getSelectedVertexIndices();
+    this.vertices = smoothVertices(this.vertices, this.edges, targets, factor, iterations);
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+  }
+
+  public dissolveVertices(vertexIndices?: number[]): void {
+    const targets = vertexIndices ?? this.getSelectedVertexIndices();
+    const result = dissolveVertices(this.vertices, this.edges, this.faces, targets);
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+  }
+
+  public deleteVertices(vertexIndices?: number[]): void {
+    const targets = vertexIndices ?? this.getSelectedVertexIndices();
+    const result = deleteVertices(this.vertices, this.edges, this.faces, targets);
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+  }
+
+  public slideVertex(vertexIndex: number, targetEdgeIndex: number, factor: number): void {
+    const edge = this.edges[targetEdgeIndex];
+    if (edge) {
+      slideVertex(this.vertices, vertexIndex, edge, factor);
+      this.computeFaceNormals();
+      this.computeVertexNormals();
+    }
+  }
+
+  // Edge Operations
+  public createEdge(v1: number, v2: number): EdgeData {
+    const result = createEdgeBetweenVertices(this.edges, v1, v2);
+    return result.edge;
+  }
+
+  public subdivideEdges(edgeIndices?: number[], cuts: number = 1): void {
+    const targets = edgeIndices ?? this.getSelectedEdgeIndices();
+    const result = subdivideEdges(this.vertices, this.edges, this.faces, targets, cuts);
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+  }
+
   public subdivide(iterations: number = 1): void {
     for (let iter = 0; iter < iterations; iter++) {
       const midpointMap = new Map<string, number>();
@@ -681,13 +963,11 @@ export class MeshTopology {
             { index: newFaces.length + 3, vertexIndices: [m01, m12, m20], selected: face.selected },
           );
         } else if (vi.length === 4) {
-          // Quad face: split into 4 quads or triangulate then split
           const v0 = vi[0];
           const v1 = vi[1];
           const v2 = vi[2];
           const v3 = vi[3];
 
-          // Subdivide as two triangles
           const m01 = getOrAddMidpoint(v0, v1);
           const m12 = getOrAddMidpoint(v1, v2);
           const m20 = getOrAddMidpoint(v2, v0);
@@ -707,7 +987,6 @@ export class MeshTopology {
             { index: newFaces.length + 3, vertexIndices: [m20, m23, m30], selected: face.selected },
           );
         } else {
-          // Pass-through if unsupported n-gon
           newFaces.push({ ...face, index: newFaces.length });
         }
       }
@@ -717,6 +996,79 @@ export class MeshTopology {
       this.computeFaceNormals();
       this.computeVertexNormals();
     }
+  }
+
+  public dissolveEdges(edgeIndices?: number[]): void {
+    const targets = edgeIndices ?? this.getSelectedEdgeIndices();
+    const result = dissolveEdges(this.vertices, this.edges, this.faces, targets);
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+  }
+
+  public deleteEdges(edgeIndices?: number[], deleteFacesOnly: boolean = false): void {
+    const targets = edgeIndices ?? this.getSelectedEdgeIndices();
+    const result = deleteEdges(this.vertices, this.edges, this.faces, targets, deleteFacesOnly);
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+  }
+
+  public getEdgeLoop(startEdgeIndex: number): number[] {
+    return getEdgeLoop(this.edges, this.faces, startEdgeIndex);
+  }
+
+  public getEdgeRing(startEdgeIndex: number): number[] {
+    return getEdgeRing(this.edges, this.faces, startEdgeIndex);
+  }
+
+  public slideEdge(edgeIndices?: number[], factor: number = 0.5): void {
+    const targets = edgeIndices ?? this.getSelectedEdgeIndices();
+    slideEdge(this.vertices, this.edges, this.faces, targets, factor);
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+  }
+
+  // Topology Tools
+  public loopCut(
+    startEdgeIndex: number,
+    factor: number = 0.5,
+    cuts: number = 1,
+  ): { newFaceIndices: number[]; newVertexIndices: number[] } {
+    const result = loopCut(this.vertices, this.edges, this.faces, startEdgeIndex, factor, cuts);
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+    return {
+      newFaceIndices: result.newFaceIndices,
+      newVertexIndices: result.newVertexIndices,
+    };
+  }
+
+  public knifeSplitEdge(edgeIndex: number, factor: number = 0.5): number {
+    const result = knifeSplitEdge(this.vertices, this.edges, this.faces, edgeIndex, factor);
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+    return result.newVertexIndices[0] ?? -1;
+  }
+
+  public knifeSplitFace(faceIndex: number, v1: number, v2: number): number[] {
+    const result = knifeSplitFace(this.vertices, this.edges, this.faces, faceIndex, v1, v2);
+    this.vertices = result.vertices;
+    this.edges = result.edges;
+    this.faces = result.faces;
+    this.computeFaceNormals();
+    this.computeVertexNormals();
+    return result.newFaceIndices;
   }
 
   /**
