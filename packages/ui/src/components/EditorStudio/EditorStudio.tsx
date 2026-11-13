@@ -913,6 +913,23 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
     ],
   );
 
+  // Electron Window Maximized State Listener
+  const [isWindowMaximized, setIsWindowMaximized] = useState(false);
+
+  useEffect(() => {
+    if (platformBridge.window?.isMaximized) {
+      Promise.resolve(platformBridge.window.isMaximized()).then((val) => {
+        setIsWindowMaximized(Boolean(val));
+      });
+    }
+    if (platformBridge.window?.onMaximizedChange) {
+      return platformBridge.window.onMaximizedChange((maximized) => {
+        setIsWindowMaximized(maximized);
+      });
+    }
+    return undefined;
+  }, [platformBridge]);
+
   // Electron Native Menu Listener (if available)
   useEffect(() => {
     const bridge = (window as any).electronBridge || (window as any).electronAPI;
@@ -1527,6 +1544,7 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
             onMinimize={platformBridge.window?.minimize}
             onMaximize={platformBridge.window?.maximize}
             onClose={platformBridge.window?.close}
+            isMaximized={isWindowMaximized}
             className="w-full"
           />
         }

@@ -43,6 +43,7 @@ export interface HeaderProps {
   onMinimize?: () => void;
   onMaximize?: () => void;
   onClose?: () => void;
+  isMaximized?: boolean;
   className?: string;
 }
 
@@ -75,19 +76,34 @@ export const Header: React.FC<HeaderProps> = ({
   onMinimize,
   onMaximize,
   onClose,
+  isMaximized = false,
   className = '',
 }) => {
   const { theme, toggleTheme } = useTheme();
 
+  const handleHeaderDoubleClick = (e: React.MouseEvent) => {
+    // Only toggle maximize/restore when double-clicking empty header background
+    const target = e.target as HTMLElement;
+    if (target.closest('button, select, input, a, [role="button"], [role="menuitem"]')) {
+      return;
+    }
+    onMaximize?.();
+  };
+
   return (
     <header
+      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      onDoubleClick={handleHeaderDoubleClick}
       className={cn(
         'flex items-center justify-between h-9 bg-[#282828] border-b border-[#181818] px-2 select-none text-xs text-gray-200 z-30',
         className,
       )}
     >
       {/* Left: App Logo + MenuBar + Mode Switcher + Workspaces */}
-      <div className="flex items-center gap-3">
+      <div
+        className="flex items-center gap-3"
+        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+      >
         {headerPrefix}
 
         {/* App Branding */}
@@ -190,7 +206,10 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Right: Quick actions + Theme switcher + Window Controls */}
-      <div className="flex items-center gap-2">
+      <div
+        className="flex items-center gap-2"
+        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+      >
         {headerSuffix}
         {/* Command Search Button */}
         {onOpenCommandPalette && (
@@ -243,35 +262,68 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         {/* Desktop Window Controls */}
-        <div className="flex items-center gap-0.5 pl-1 border-l border-[#3e3e3e]">
-          {onMinimize && (
-            <button
-              onClick={onMinimize}
-              className="p-1 rounded hover:bg-[#383838] text-gray-400 hover:text-white transition-colors"
-              title="Minimize"
-            >
-              <Minus size={12} />
-            </button>
-          )}
-          {onMaximize && (
-            <button
-              onClick={onMaximize}
-              className="p-1 rounded hover:bg-[#383838] text-gray-400 hover:text-white transition-colors"
-              title="Maximize"
-            >
-              <Square size={10} />
-            </button>
-          )}
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="p-1 rounded hover:bg-red-600 text-gray-400 hover:text-white transition-colors"
-              title="Close"
-            >
-              <X size={12} />
-            </button>
-          )}
-        </div>
+        {(onMinimize || onMaximize || onClose) && (
+          <div
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            className="flex items-center ml-1 border-l border-[#3e3e3e] -mr-2"
+          >
+            {onMinimize && (
+              <button
+                type="button"
+                onClick={onMinimize}
+                className="h-9 w-10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#383838] transition-colors cursor-pointer"
+                title="Minimize to Taskbar"
+                aria-label="Minimize"
+              >
+                <Minus size={14} />
+              </button>
+            )}
+            {onMaximize && (
+              <button
+                type="button"
+                onClick={onMaximize}
+                className="h-9 w-10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#383838] transition-colors cursor-pointer"
+                title={isMaximized ? 'Restore Down' : 'Maximize'}
+                aria-label={isMaximized ? 'Restore Down' : 'Maximize'}
+              >
+                {isMaximized ? (
+                  <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 11 11"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="stroke-current"
+                  >
+                    <path d="M2.5 1.5H9.5V8.5H8.5V2.5H2.5V1.5Z" fill="currentColor" />
+                    <rect
+                      x="1.5"
+                      y="3.5"
+                      width="6.5"
+                      height="6.5"
+                      stroke="currentColor"
+                      strokeWidth="1.2"
+                      fill="none"
+                    />
+                  </svg>
+                ) : (
+                  <Square size={11} />
+                )}
+              </button>
+            )}
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="h-9 w-11 flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#e81123] transition-colors cursor-pointer"
+                title="Close Application"
+                aria-label="Close"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </header>
   );

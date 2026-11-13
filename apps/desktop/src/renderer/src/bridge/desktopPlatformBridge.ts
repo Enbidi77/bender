@@ -200,6 +200,8 @@ export function createDesktopPlatformBridge(): IPlatformBridge {
       minimize: () => bridge?.minimize?.(),
       maximize: () => bridge?.maximize?.(),
       close: () => bridge?.close?.(),
+      isMaximized: () => bridge?.isMaximized?.(),
+      onMaximizedChange: (cb: (maximized: boolean) => void) => bridge?.onMaximizedChange?.(cb),
       setTitle: (title: string) => bridge?.setTitle?.(title),
     },
     clipboard: {

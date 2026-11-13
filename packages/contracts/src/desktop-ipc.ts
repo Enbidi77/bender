@@ -90,6 +90,8 @@ export interface DesktopBridgeAPI {
   minimize(): void;
   maximize(): void;
   close(): void;
+  isMaximized?(): Promise<boolean>;
+  onMaximizedChange?(callback: (isMaximized: boolean) => void): () => void;
 
   // Menu action event listener
   onMenuAction(callback: (action: string, payload?: unknown) => void): () => void;

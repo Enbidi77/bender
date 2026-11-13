@@ -21,6 +21,16 @@ const api: DesktopBridgeAPI = {
   minimize: () => ipcRenderer.send('window:minimize'),
   maximize: () => ipcRenderer.send('window:maximize'),
   close: () => ipcRenderer.send('window:close'),
+  isMaximized: () => ipcRenderer.invoke('window:is-maximized'),
+  onMaximizedChange: (callback: (isMaximized: boolean) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, isMax: boolean) => {
+      callback(isMax);
+    };
+    ipcRenderer.on('window:maximized-change', handler);
+    return () => {
+      ipcRenderer.removeListener('window:maximized-change', handler);
+    };
+  },
 
   onMenuAction: (callback: (action: string, payload?: unknown) => void) => {
     const handler = (_: Electron.IpcRendererEvent, action: string, payload?: unknown) => {

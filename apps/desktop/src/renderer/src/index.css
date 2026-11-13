@@ -33,3 +33,14 @@ body,
 ::-webkit-scrollbar-thumb:hover {
   background: #555555;
 }
+
+/* Frameless desktop window drag regions */
+[data-app-region='drag'],
+.app-region-drag {
+  -webkit-app-region: drag;
+}
+
+[data-app-region='no-drag'],
+.app-region-no-drag {
+  -webkit-app-region: no-drag;
+}

@@ -49,6 +49,8 @@ export interface IPlatformBridge {
     minimize?(): void;
     maximize?(): void;
     close?(): void;
+    isMaximized?(): Promise<boolean> | boolean;
+    onMaximizedChange?(callback: (isMaximized: boolean) => void): () => void;
     setTitle?(title: string): void;
   };
   clipboard: {
