@@ -156,6 +156,9 @@ importers:
       '@blender-elt/scene-core':
         specifier: workspace:*
         version: link:../../packages/scene-core
+      '@blender-elt/sculpting':
+        specifier: workspace:*
+        version: link:../../packages/sculpting
       '@blender-elt/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -242,6 +245,9 @@ importers:
 
   packages/commands:
     dependencies:
+      '@blender-elt/animation':
+        specifier: workspace:*
+        version: link:../animation
       '@blender-elt/contracts':
         specifier: workspace:*
         version: link:../contracts
@@ -466,6 +472,9 @@ importers:
 
   packages/viewport:
     dependencies:
+      '@blender-elt/animation':
+        specifier: workspace:*
+        version: link:../animation
       '@blender-elt/commands':
         specifier: workspace:*
         version: link:../commands

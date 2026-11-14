@@ -32,7 +32,8 @@ export interface Transform {
 /**
  * Scene Graph Node Definitions
  */
-export type NodeType = 'mesh' | 'camera' | 'light' | 'group' | 'collection' | 'root';
+export type NodeType =
+  'mesh' | 'camera' | 'light' | 'group' | 'collection' | 'root' | 'armature' | 'bone';
 
 export interface BaseSceneNode {
   id: string;
@@ -102,6 +103,49 @@ export interface GroupNode extends BaseSceneNode {
   type: 'group';
 }
 
+/**
+ * Skeletal Armature & Bone structures
+ */
+export interface BoneTransform {
+  head: Vector3;
+  tail: Vector3;
+  roll: number;
+  length?: number;
+}
+
+export interface IBone {
+  id: string;
+  name: string;
+  parentId: string | null;
+  childrenIds: string[];
+  head: Vector3;
+  tail: Vector3;
+  roll: number;
+  length: number;
+  connected: boolean;
+  deform: boolean;
+}
+
+export interface IArmatureNode extends BaseSceneNode {
+  type: 'armature';
+  bones: Record<string, IBone>;
+  rootBoneIds: string[];
+}
+
+export interface IBoneNode extends BaseSceneNode {
+  type: 'bone';
+  armatureId: string;
+  head: Vector3;
+  tail: Vector3;
+  roll: number;
+  length: number;
+  connected: boolean;
+  deform: boolean;
+}
+
+export type ArmatureNode = IArmatureNode;
+export type BoneNode = IBoneNode;
+
 export interface SceneRoot {
   id: string;
   name: string;
@@ -115,4 +159,5 @@ export interface SceneRoot {
   backgroundColor?: string;
 }
 
-export type SceneNode = MeshNode | CameraNode | LightNode | GroupNode | CollectionNode;
+export type SceneNode =
+  MeshNode | CameraNode | LightNode | GroupNode | CollectionNode | IArmatureNode | IBoneNode;

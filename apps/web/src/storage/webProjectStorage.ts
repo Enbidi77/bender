@@ -13,6 +13,7 @@ import {
   serializeProject,
   deserializeProject,
   createProjectMetadata,
+  CURRENT_PROJECT_VERSION,
 } from '@blender-elt/persistence';
 import { createPrimitiveGeometry, bufferGeometryToMeshData } from '@blender-elt/modeling';
 
@@ -645,7 +646,7 @@ class WebProjectStorage {
     }
 
     return {
-      version: '1.0.0',
+      version: CURRENT_PROJECT_VERSION,
       metadata: createProjectMetadata(name),
       root,
       nodes,

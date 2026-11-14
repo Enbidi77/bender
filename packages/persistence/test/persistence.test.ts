@@ -20,7 +20,7 @@ describe('packages/persistence', () => {
       const meta = createProjectMetadata('My Project', 'Artist');
       expect(meta.name).toBe('My Project');
       expect(meta.author).toBe('Artist');
-      expect(meta.version).toBe('1.0.0');
+      expect(meta.version).toBe('1.1.0');
       expect(meta.createdAt).toBeDefined();
       expect(meta.updatedAt).toBeDefined();
     });

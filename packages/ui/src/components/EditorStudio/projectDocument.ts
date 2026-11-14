@@ -5,7 +5,9 @@ import type {
   MeshNode,
   PrimitiveType,
   SceneNode,
+  AnimationTimeline,
 } from '@blender-elt/contracts';
+import { timelineStore } from '@blender-elt/animation';
 import { createProjectMetadata } from '@blender-elt/persistence';
 import { createPrimitiveGeometry, bufferGeometryToMeshData } from '@blender-elt/modeling';
 import type { SceneGraphState } from '@blender-elt/scene-core';
@@ -16,6 +18,7 @@ import type { SceneGraphState } from '@blender-elt/scene-core';
 export function buildProjectDocument(
   state: SceneGraphState,
   name: string = 'Untitled.belt',
+  timelineState?: AnimationTimeline,
 ): ProjectDocument {
   const geometries: Record<string, IMeshData> = {};
   const materials: Record<string, MaterialDefinition> = {};
@@ -35,6 +38,10 @@ export function buildProjectDocument(
     }
   });
 
+  const timeline =
+    timelineState ??
+    (typeof timelineStore?.getTimeline === 'function' ? timelineStore.getTimeline() : undefined);
+
   return {
     version: '1.0.0',
     metadata: createProjectMetadata(name),
@@ -43,6 +50,7 @@ export function buildProjectDocument(
     collections: state.collections,
     geometries,
     materials,
+    timeline,
   };
 }
 

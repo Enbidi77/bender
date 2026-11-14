@@ -4,3 +4,4 @@ export * from './registry.js';
 export * from './sculpt-stroke-command.js';
 export * from './edit-mode-commands.js';
 export * from './selection-algorithms.js';
+export * from './animation-commands.js';

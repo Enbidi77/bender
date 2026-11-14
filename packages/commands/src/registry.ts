@@ -8,6 +8,7 @@ import type {
   ICompoundCommand,
 } from '@blender-elt/contracts';
 import { BaseCommand } from './commands.js';
+import { getTimelineStore } from './animation-commands.js';
 
 /**
  * Compound / Macro command grouping multiple commands for atomic undo and redo
@@ -50,11 +51,222 @@ export class CompoundCommand extends BaseCommand implements ICompoundCommand {
 }
 
 /**
+ * Helper to collect all unique keyframe frame numbers from tracks and actions
+ */
+function getAllKeyframeFrames(store: ReturnType<typeof getTimelineStore>): number[] {
+  const frames = new Set<number>();
+  for (const t of store.tracks) {
+    for (const kf of t.keyframes) {
+      frames.add(kf.frame);
+    }
+  }
+  for (const a of Object.values(store.actions)) {
+    for (const ch of a.channels) {
+      for (const kf of ch.keyframes) {
+        frames.add(kf.frame);
+      }
+    }
+  }
+  return Array.from(frames).sort((a, b) => a - b);
+}
+
+/**
+ * Built-in animation action definitions matching standard Blender keyboard shortcuts
+ */
+export const ANIMATION_ACTIONS: CommandActionDefinition[] = [
+  {
+    id: 'animation:insert-keyframe-menu',
+    name: 'Insert Keyframe Menu',
+    description: 'Open keyframe insertion menu (Location, Rotation, Scale)',
+    category: 'animation',
+    shortcuts: [{ key: 'i', scope: 'global' }],
+    menuPath: ['Animation', 'Insert Keyframe'],
+    keywords: ['keyframe', 'insert', 'location', 'rotation', 'scale', 'locrotscale'],
+    execute: (ctx, payload) => {
+      if (ctx.dispatch) {
+        ctx.dispatch({ type: 'OPEN_KEYFRAME_MENU', payload });
+      }
+    },
+  },
+  {
+    id: 'animation:delete-keyframe',
+    name: 'Delete Keyframe',
+    description: 'Delete keyframe at current frame for selected objects',
+    category: 'animation',
+    shortcuts: [{ key: 'i', alt: true, scope: 'global' }],
+    menuPath: ['Animation', 'Delete Keyframe'],
+    keywords: ['keyframe', 'delete', 'remove', 'clear'],
+    execute: (ctx, payload) => {
+      const store = getTimelineStore(ctx);
+      const current = store.currentFrame;
+      const targetId = (payload as { targetNodeId?: string } | undefined)?.targetNodeId;
+
+      if (targetId) {
+        for (const t of store.tracks) {
+          if (t.targetNodeId === targetId) {
+            store.removeKeyframe(t.id, current);
+          }
+        }
+        for (const a of Object.values(store.actions)) {
+          for (const ch of a.channels) {
+            if (ch.targetNodeId === targetId) {
+              store.removeKeyframe(ch.id, current);
+            }
+          }
+        }
+      }
+
+      if (ctx.dispatch) {
+        ctx.dispatch({
+          type: 'DELETE_KEYFRAME',
+          payload: { frame: current, targetNodeId: targetId },
+        });
+      }
+    },
+  },
+  {
+    id: 'animation:toggle-play',
+    name: 'Toggle Play/Pause',
+    description: 'Toggle timeline playback',
+    category: 'animation',
+    shortcuts: [
+      { key: 'space', scope: 'global' },
+      { key: ' ', scope: 'global' },
+    ],
+    menuPath: ['Animation', 'Toggle Play'],
+    keywords: ['play', 'pause', 'playback', 'transport'],
+    execute: (ctx) => {
+      const store = getTimelineStore(ctx);
+      store.togglePlay();
+    },
+  },
+  {
+    id: 'animation:prev-frame',
+    name: 'Previous Frame',
+    description: 'Step backward one frame',
+    category: 'animation',
+    shortcuts: [{ key: 'arrowleft', scope: 'global' }],
+    menuPath: ['Animation', 'Previous Frame'],
+    keywords: ['step', 'prev', 'frame', 'back'],
+    execute: (ctx) => {
+      const store = getTimelineStore(ctx);
+      store.prevFrame();
+    },
+  },
+  {
+    id: 'animation:next-frame',
+    name: 'Next Frame',
+    description: 'Step forward one frame',
+    category: 'animation',
+    shortcuts: [{ key: 'arrowright', scope: 'global' }],
+    menuPath: ['Animation', 'Next Frame'],
+    keywords: ['step', 'next', 'frame', 'forward'],
+    execute: (ctx) => {
+      const store = getTimelineStore(ctx);
+      store.nextFrame();
+    },
+  },
+  {
+    id: 'animation:jump-start',
+    name: 'Jump to Start Frame',
+    description: 'Jump to timeline start frame',
+    category: 'animation',
+    shortcuts: [{ key: 'arrowleft', shift: true, scope: 'global' }],
+    menuPath: ['Animation', 'Jump to Start'],
+    keywords: ['jump', 'start', 'first', 'beginning'],
+    execute: (ctx) => {
+      const store = getTimelineStore(ctx);
+      store.jumpToStart();
+    },
+  },
+  {
+    id: 'animation:jump-end',
+    name: 'Jump to End Frame',
+    description: 'Jump to timeline end frame',
+    category: 'animation',
+    shortcuts: [{ key: 'arrowright', shift: true, scope: 'global' }],
+    menuPath: ['Animation', 'Jump to End'],
+    keywords: ['jump', 'end', 'last'],
+    execute: (ctx) => {
+      const store = getTimelineStore(ctx);
+      store.jumpToEnd();
+    },
+  },
+  {
+    id: 'animation:prev-keyframe',
+    name: 'Previous Keyframe',
+    description: 'Jump to the previous keyframe on the timeline',
+    category: 'animation',
+    shortcuts: [{ key: 'arrowdown', scope: 'global' }],
+    menuPath: ['Animation', 'Previous Keyframe'],
+    keywords: ['keyframe', 'prev', 'jump'],
+    execute: (ctx) => {
+      const store = getTimelineStore(ctx);
+      const current = store.currentFrame;
+      const allFrames = getAllKeyframeFrames(store);
+      const prev = allFrames.filter((f) => f < current).pop();
+      if (prev !== undefined) {
+        store.setFrame(prev);
+      }
+    },
+  },
+  {
+    id: 'animation:next-keyframe',
+    name: 'Next Keyframe',
+    description: 'Jump to the next keyframe on the timeline',
+    category: 'animation',
+    shortcuts: [{ key: 'arrowup', scope: 'global' }],
+    menuPath: ['Animation', 'Next Keyframe'],
+    keywords: ['keyframe', 'next', 'jump'],
+    execute: (ctx) => {
+      const store = getTimelineStore(ctx);
+      const current = store.currentFrame;
+      const allFrames = getAllKeyframeFrames(store);
+      const next = allFrames.find((f) => f > current);
+      if (next !== undefined) {
+        store.setFrame(next);
+      }
+    },
+  },
+  {
+    id: 'animation:toggle-auto-key',
+    name: 'Toggle Auto-Keying',
+    description: 'Toggle automatic keyframing on transform changes',
+    category: 'animation',
+    shortcuts: [{ key: 'k', shift: true, alt: true, scope: 'global' }],
+    menuPath: ['Animation', 'Auto-Keying'],
+    keywords: ['auto-key', 'record', 'automatic'],
+    execute: (ctx) => {
+      const store = getTimelineStore(ctx);
+      store.setAutoKeying(!store.autoKeyingEnabled);
+    },
+  },
+];
+
+/**
+ * Registers all animation actions to a CommandRegistry instance
+ */
+export function registerAnimationActions(registry: CommandRegistry): void {
+  registry.registerBatch(ANIMATION_ACTIONS);
+}
+
+/**
  * Implementation of ICommandRegistry for managing searchable and executable actions
  */
 export class CommandRegistry implements ICommandRegistry {
   private actions: Map<string, CommandActionDefinition> = new Map();
   private categoryIndex: Map<CommandCategory, Set<string>> = new Map();
+
+  constructor(options?: { registerBuiltIns?: boolean; registerAnimation?: boolean }) {
+    if (options?.registerBuiltIns || options?.registerAnimation) {
+      this.registerAnimationActions();
+    }
+  }
+
+  public registerAnimationActions(): this {
+    registerAnimationActions(this);
+    return this;
+  }
 
   public register(action: CommandActionDefinition): void {
     this.actions.set(action.id, action);
@@ -189,3 +401,17 @@ export class CommandRegistry implements ICommandRegistry {
     await action.execute(ctx, payload);
   }
 }
+
+/**
+ * Factory creating a CommandRegistry with built-in animation actions registered
+ */
+export function createDefaultCommandRegistry(): CommandRegistry {
+  const reg = new CommandRegistry();
+  reg.registerAnimationActions();
+  return reg;
+}
+
+/**
+ * Shared default CommandRegistry singleton
+ */
+export const defaultCommandRegistry = createDefaultCommandRegistry();

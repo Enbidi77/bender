@@ -1,22 +1,60 @@
 import type {
+  AnimationProperty,
+  AnimationPropertyPath,
   AnimationTimeline,
   AnimationTrack,
-  AnimationProperty,
+  BezierHandle,
+  ExtrapolationMode,
+  IActionGroup,
+  IAnimationAction,
+  IAnimationChannel,
+  IAnimationConstraint,
+  IBone,
+  IBonePose,
+  IConstraint,
+  IFCurveModifier,
   IKeyframe,
+  INLAStrip,
+  INLATrack,
+  IPoseChannel,
+  IPoseState,
+  KeyframeHandleType,
   KeyframeInterpolation,
+  KeyframeType,
   PlaybackState,
 } from '@blender-elt/contracts';
 
 export type {
+  AnimationProperty,
+  AnimationPropertyPath,
   AnimationTimeline,
   AnimationTrack,
-  AnimationProperty,
+  BezierHandle,
+  ExtrapolationMode,
+  IActionGroup,
+  IAnimationAction,
+  IAnimationChannel,
+  IAnimationConstraint,
+  IBone,
+  IBonePose,
+  IConstraint,
+  IFCurveModifier,
   IKeyframe,
+  INLAStrip,
+  INLATrack,
+  IPoseChannel,
+  IPoseState,
+  KeyframeHandleType,
   KeyframeInterpolation,
+  KeyframeType,
   PlaybackState,
 };
 
 export * from './interpolation.js';
+export * from './bezier-evaluator.js';
+export * from './extrapolation.js';
+export * from './modifiers.js';
+export * from './ik-solver.js';
 export * from './tracks.js';
 export * from './timeline-store.js';
 export * from './playback-controller.js';
@@ -36,6 +74,8 @@ export function createDefaultTimeline(): AnimationTimeline {
     isPlaying: false,
     loop: true,
     tracks: [],
+    actions: {},
+    activeActionId: undefined,
   };
 }
 

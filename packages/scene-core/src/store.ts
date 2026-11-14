@@ -40,6 +40,7 @@ export interface SceneGraphState {
 
   // Transforms
   setTransform: (id: string, transform: Partial<Transform>) => void;
+  updateNodeTransform: (id: string, transform: Partial<Transform>) => void;
   setPosition: (id: string, pos: Partial<Vector3>) => void;
   setRotation: (id: string, rot: Partial<Euler>) => void;
   setScale: (id: string, scale: Partial<Vector3>) => void;
@@ -325,6 +326,10 @@ export function createSceneStore(initialState?: {
           },
         };
       });
+    },
+
+    updateNodeTransform: (id, partialTransform) => {
+      get().setTransform(id, partialTransform);
     },
 
     setPosition: (id, pos) => {

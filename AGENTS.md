@@ -70,6 +70,15 @@ blender-elt/
 - All IPC communication goes through the typed `DesktopBridgeAPI` exposed via `contextBridge` in `apps/desktop/src/preload`.
 - Never expose raw Electron modules (`ipcRenderer`, `fs`, `child_process`) directly to the renderer.
 
+### 3.6 Animation Subsystem Responsibilities & Conventions
+
+- **Single Source of Truth (`@blender-elt/contracts`)**: All animation types (`IAnimationAction`, `IAnimationChannel`, `IKeyframe`, `BezierHandle`, `KeyframeHandleType`, `ExtrapolationMode`, `IFCurveModifier`, `ArmatureNode`, `BoneNode`, `AnimationTimeline`) must be defined in `packages/contracts/src/animation.ts` and `scene.ts`.
+- **Headless Decoupling (`@blender-elt/animation`)**: Curve evaluation (Newton-Raphson cubic Bezier, Catmull-Rom auto-tangents, cyclical offsets, analytical 2-bone IK) and `TimelineStore` must remain 100% decoupled from React and DOM APIs.
+- **Undo/Redo Command Mandate (`@blender-elt/commands`)**: Every keyframe insertion, deletion, retiming movement, or handle edit must be encapsulated in an `ICommand` (`InsertTransformKeyframeCommand`, `InsertKeyframeCommand`, `DeleteKeyframeCommand`, `MoveKeyframeCommand`, etc.). Direct mutations outside `CommandManager` are prohibited.
+- **60fps Viewport Synchronization (`@blender-elt/viewport`)**: `AnimationViewportBridge` / `useAnimationSync` evaluates active channels when playhead frame ticks, immediately updating Three.js `Object3D` transforms and `sceneStore.updateNodeTransform`.
+- **Studio UI & Hotkeys (`@blender-elt/ui`)**: Bottom drawer unifies Timeline, Dope Sheet, and Graph Editor. Hotkey `I` opens the Keyframe Menu modal (`Location`, `Rotation`, `Scale`, `LocRotScale`); `Alt+I` removes keyframes; gizmo release commits auto-keying when enabled.
+- **Persistence Roundtrip (`@blender-elt/persistence`)**: Project documents must serialize the complete `AnimationTimeline` to ensure zero data loss across file save/load.
+
 ---
 
 ## 4. Coding Conventions

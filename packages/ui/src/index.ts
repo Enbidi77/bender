@@ -22,8 +22,8 @@ export * from './components/Inspector/PropertiesPanel.js';
 export * from './components/Toolbar/ViewportToolbar.js';
 export * from './components/Toolbar/ViewportOverlays.js';
 
-// Timeline
-export * from './components/Timeline/TimelineBar.js';
+// Timeline & Animation Editors
+export * from './components/Timeline/index.js';
 
 // Command Palette
 export * from './components/CommandPalette/CommandPalette.js';
@@ -32,6 +32,7 @@ export * from './components/CommandPalette/CommandPalette.js';
 export * from './components/Modals/AboutModal.js';
 export * from './components/Modals/ShortcutsModal.js';
 export * from './components/Modals/PreferencesModal.js';
+export * from './components/Modals/KeyframeMenuModal.js';
 
 // Layout
 export * from './components/Layout/DockLayout.js';

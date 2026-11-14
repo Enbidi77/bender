@@ -63,7 +63,7 @@ export const SceneCollectionSchema = z.object({
 export const BaseNodeSchema = z.object({
   id: z.string(),
   name: z.string(),
-  type: z.enum(['mesh', 'camera', 'light', 'group', 'collection', 'root']),
+  type: z.enum(['mesh', 'camera', 'light', 'group', 'collection', 'root', 'armature', 'bone']),
   transform: TransformSchema,
   visible: z.boolean(),
   locked: z.boolean(),
@@ -235,10 +235,42 @@ export const LightNodeSchema = BaseNodeSchema.extend({
   penumbra: z.number().optional(),
 });
 
+export const BoneSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  parentId: z.string().nullable(),
+  childrenIds: z.array(z.string()),
+  head: Vector3Schema,
+  tail: Vector3Schema,
+  roll: z.number(),
+  length: z.number(),
+  connected: z.boolean(),
+  deform: z.boolean(),
+});
+
+export const ArmatureNodeSchema = BaseNodeSchema.extend({
+  type: z.literal('armature'),
+  bones: z.record(z.string(), BoneSchema).default({}),
+  rootBoneIds: z.array(z.string()).default([]),
+});
+
+export const BoneNodeSchema = BaseNodeSchema.extend({
+  type: z.literal('bone'),
+  armatureId: z.string(),
+  head: Vector3Schema,
+  tail: Vector3Schema,
+  roll: z.number(),
+  length: z.number(),
+  connected: z.boolean(),
+  deform: z.boolean(),
+});
+
 export const SceneNodeSchema = z.union([
   MeshNodeSchema,
   CameraNodeSchema,
   LightNodeSchema,
+  ArmatureNodeSchema,
+  BoneNodeSchema,
   BaseNodeSchema,
 ]);
 
@@ -392,6 +424,212 @@ export const WorkspaceLayoutConfigSchema = z.object({
   customWorkspaces: z.record(z.string(), WorkspaceDefinitionSchema).optional(),
 });
 
+/**
+ * Animation Schemas matching @blender-elt/contracts
+ */
+export const BezierHandleSchema = z.object({
+  frame: z.number(),
+  value: z.number(),
+});
+
+export const KeyframeInterpolationSchema = z.enum([
+  'constant',
+  'linear',
+  'bezier',
+  'step',
+  'ease-in',
+  'ease-out',
+  'ease-in-out',
+]);
+
+export const KeyframeHandleTypeSchema = z.enum(['auto', 'aligned', 'vector', 'free']);
+
+export const KeyframeTypeSchema = z.enum(['keyframe', 'breakdown', 'extreme', 'jitter']);
+
+export const KeyframeSchema = z.object({
+  id: z.string().optional(),
+  frame: z.number(),
+  time: z.number().optional().default(0),
+  value: z.union([z.number(), z.array(z.number())]),
+  interpolation: KeyframeInterpolationSchema.optional(),
+  handleTypeLeft: KeyframeHandleTypeSchema.optional(),
+  handleTypeRight: KeyframeHandleTypeSchema.optional(),
+  handleLeft: BezierHandleSchema.optional(),
+  handleRight: BezierHandleSchema.optional(),
+  keyframeType: KeyframeTypeSchema.optional(),
+  selected: z.boolean().optional(),
+  handleLeftSelected: z.boolean().optional(),
+  handleRightSelected: z.boolean().optional(),
+  inTangent: z.tuple([z.number(), z.number()]).optional(),
+  outTangent: z.tuple([z.number(), z.number()]).optional(),
+});
+
+export const ExtrapolationModeSchema = z.enum(['constant', 'linear', 'cyclic', 'cyclic_offset']);
+
+export const FCurveModifierTypeSchema = z.enum([
+  'noise',
+  'cycles',
+  'limits',
+  'stepped',
+  'envelope',
+  'generator',
+]);
+
+export const BaseFCurveModifierSchema = z.object({
+  id: z.string(),
+  type: FCurveModifierTypeSchema,
+  name: z.string(),
+  enabled: z.boolean().default(true),
+  influence: z.number().min(0).max(1).default(1),
+});
+
+export const NoiseFCurveModifierSchema = BaseFCurveModifierSchema.extend({
+  type: z.literal('noise'),
+  scale: z.number().default(1),
+  strength: z.number().default(1),
+  phase: z.number().default(0),
+  depth: z.number().default(1),
+});
+
+export const CyclesFCurveModifierSchema = BaseFCurveModifierSchema.extend({
+  type: z.literal('cycles'),
+  modeBefore: z.enum(['repeat', 'repeat_offset']).default('repeat'),
+  countBefore: z.number().default(0),
+  modeAfter: z.enum(['repeat', 'repeat_offset']).default('repeat'),
+  countAfter: z.number().default(0),
+});
+
+export const LimitsFCurveModifierSchema = BaseFCurveModifierSchema.extend({
+  type: z.literal('limits'),
+  minX: z.number().optional(),
+  maxX: z.number().optional(),
+  minY: z.number().optional(),
+  maxY: z.number().optional(),
+});
+
+export const SteppedFCurveModifierSchema = BaseFCurveModifierSchema.extend({
+  type: z.literal('stepped'),
+  stepSize: z.number().default(2),
+  offset: z.number().default(0),
+});
+
+export const EnvelopeFCurveModifierSchema = BaseFCurveModifierSchema.extend({
+  type: z.literal('envelope'),
+  min: z.number().optional(),
+  max: z.number().optional(),
+  referenceValue: z.number().optional(),
+});
+
+export const GeneratorFCurveModifierSchema = BaseFCurveModifierSchema.extend({
+  type: z.literal('generator'),
+  coefficients: z.array(z.number()),
+});
+
+export const FCurveModifierSchema = z.discriminatedUnion('type', [
+  NoiseFCurveModifierSchema,
+  CyclesFCurveModifierSchema,
+  LimitsFCurveModifierSchema,
+  SteppedFCurveModifierSchema,
+  EnvelopeFCurveModifierSchema,
+  GeneratorFCurveModifierSchema,
+]);
+
+export const IFCurveModifierSchema = FCurveModifierSchema;
+
+export const AnimationChannelSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  targetNodeId: z.string(),
+  propertyPath: z.string(),
+  keyframes: z.array(KeyframeSchema).default([]),
+  interpolation: KeyframeInterpolationSchema.default('bezier'),
+  extrapolation: ExtrapolationModeSchema.default('constant'),
+  color: z.string().default('#4772b3'),
+  muted: z.boolean().optional().default(false),
+  locked: z.boolean().optional().default(false),
+  modifiers: z.array(FCurveModifierSchema).optional().default([]),
+});
+
+export const AnimationTrackSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  targetNodeId: z.string(),
+  property: z.string().optional(),
+  propertyPath: z.string().optional(),
+  keyframes: z.array(KeyframeSchema).default([]),
+  color: z.string().optional().default('#4772b3'),
+  muted: z.boolean().optional().default(false),
+  locked: z.boolean().optional().default(false),
+  interpolation: KeyframeInterpolationSchema.optional().default('linear'),
+  extrapolation: ExtrapolationModeSchema.optional().default('constant'),
+  modifiers: z.array(FCurveModifierSchema).optional().default([]),
+});
+
+export const ActionGroupSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  color: z.string().optional(),
+  channelIds: z.array(z.string()).default([]),
+  isExpanded: z.boolean().optional().default(true),
+});
+
+export const AnimationActionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  targetNodeId: z.string().optional(),
+  groups: z.array(ActionGroupSchema).optional().default([]),
+  channels: z.array(AnimationChannelSchema).default([]),
+  frameRange: z.tuple([z.number(), z.number()]).default([1, 250]),
+  isLooping: z.boolean().optional().default(true),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const NLAStripSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  actionId: z.string(),
+  startFrame: z.number(),
+  endFrame: z.number(),
+  actionStartFrame: z.number(),
+  actionEndFrame: z.number(),
+  playbackSpeed: z.number().default(1),
+  repeatCount: z.number().default(1),
+  blendMode: z.enum(['replace', 'add', 'multiply']).default('replace'),
+  isMuted: z.boolean().default(false),
+});
+
+export const NLATrackSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  strips: z.array(NLAStripSchema).default([]),
+  isMuted: z.boolean().default(false),
+  isSolo: z.boolean().default(false),
+  isLocked: z.boolean().default(false),
+});
+
+export const PlaybackStateSchema = z.enum(['playing', 'paused', 'stopped', 'looping']);
+
+export const AnimationTimelineSchema = z.object({
+  currentFrame: z.number().default(1),
+  startFrame: z.number().default(1),
+  endFrame: z.number().default(250),
+  fps: z.number().default(24),
+  playbackState: PlaybackStateSchema.optional().default('stopped'),
+  isPlaying: z.boolean().optional().default(false),
+  loop: z.boolean().default(true),
+  tracks: z.array(AnimationTrackSchema).default([]),
+  activeActionId: z.string().optional(),
+  actions: z.record(z.string(), AnimationActionSchema).default({}),
+  nlaTracks: z.array(NLATrackSchema).optional().default([]),
+});
+
+export type BezierHandleDto = z.infer<typeof BezierHandleSchema>;
+export type KeyframeDto = z.infer<typeof KeyframeSchema>;
+export type FCurveModifierDto = z.infer<typeof FCurveModifierSchema>;
+export type AnimationChannelDto = z.infer<typeof AnimationChannelSchema>;
+export type AnimationActionDto = z.infer<typeof AnimationActionSchema>;
+export type AnimationTimelineDto = z.infer<typeof AnimationTimelineSchema>;
+
 export const ProjectDocumentSchema = z.object({
   version: z.string(),
   metadata: ProjectMetadataSchema,
@@ -400,7 +638,7 @@ export const ProjectDocumentSchema = z.object({
   geometries: z.record(z.string(), IMeshDataSchema).default({}),
   materials: z.record(z.string(), MaterialDefinitionSchema).default({}),
   collections: z.record(z.string(), SceneCollectionSchema).optional().default({}),
-  timeline: z.any().optional(),
+  timeline: AnimationTimelineSchema.optional(),
   viewport: z.any().optional(),
   workspace: WorkspaceLayoutConfigSchema.optional(),
   selection: UnifiedSelectionModelSchema.optional(),

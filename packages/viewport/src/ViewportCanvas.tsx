@@ -14,6 +14,7 @@ import { SelectionHighlight } from './gizmos/SelectionHighlight.js';
 import { TransformGizmo } from './gizmos/TransformGizmo.js';
 import { SculptViewportLayer } from './sculpt/SculptViewportLayer.js';
 import { EditViewportLayer } from './edit/EditViewportLayer.js';
+import { AnimationViewportBridge } from './animation/AnimationViewportBridge.js';
 
 export const ViewportCanvas: React.FC = () => {
   const { config, sceneStore } = useViewportContext();
@@ -55,6 +56,9 @@ export const ViewportCanvas: React.FC = () => {
 
       {/* Scene Graph Objects */}
       <SceneRenderer />
+
+      {/* Animation Viewport Sync Bridge */}
+      <AnimationViewportBridge />
 
       {/* Selection outline and transform gizmo */}
       <SelectionHighlight />

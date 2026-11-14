@@ -16,6 +16,7 @@ import type {
   PBRMaterialConfig,
   Vector3,
   Euler,
+  Transform,
   LightNode,
   CameraNode,
   ProjectDocument,
@@ -50,7 +51,10 @@ import {
   DuplicateObjectCommand,
   RenameObjectCommand,
   SetVisibilityCommand,
+  InsertTransformKeyframeCommand,
+  DeleteKeyframeCommand,
 } from '@blender-elt/commands';
+import { timelineStore, PlaybackEngine } from '@blender-elt/animation';
 import { getMaterialPreset } from '@blender-elt/materials';
 import { exportScene } from '@blender-elt/file-formats';
 import { ViewportContainer } from '@blender-elt/viewport';
@@ -60,11 +64,12 @@ import { DockLayout } from '../Layout/DockLayout.js';
 import { Header } from '../Header/Header.js';
 import { OutlinerPanel } from '../Outliner/OutlinerPanel.js';
 import { PropertiesPanel } from '../Inspector/PropertiesPanel.js';
-import { TimelineBar } from '../Timeline/TimelineBar.js';
+import { AnimationBottomPanel, type AnimationEditorTab } from '../Timeline/index.js';
 import { CommandPalette, type CommandPaletteAction } from '../CommandPalette/CommandPalette.js';
 import { AboutModal } from '../Modals/AboutModal.js';
 import { ShortcutsModal } from '../Modals/ShortcutsModal.js';
 import { PreferencesModal } from '../Modals/PreferencesModal.js';
+import { KeyframeMenuModal, type KeyframeOptionType } from '../Modals/KeyframeMenuModal.js';
 
 import { DEFAULT_WORKSPACES } from './workspaces.js';
 import { buildProjectDocument, calculateScenePolycounts } from './projectDocument.js';
@@ -410,18 +415,42 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
 
   // 4. Animation Timeline States
-  const [currentFrame, setCurrentFrame] = useState<number>(1);
-  const [startFrame, setStartFrame] = useState<number>(1);
-  const [endFrame, setEndFrame] = useState<number>(250);
-  const [fps, setFps] = useState<number>(24);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [loop, setLoop] = useState<boolean>(true);
+  const [currentFrame, setCurrentFrame] = useState<number>(
+    () => timelineStore.getState().currentFrame,
+  );
+  const [startFrame, setStartFrame] = useState<number>(() => timelineStore.getState().startFrame);
+  const [endFrame, setEndFrame] = useState<number>(() => timelineStore.getState().endFrame);
+  const [fps, setFps] = useState<number>(() => timelineStore.getState().fps);
+  const [isPlaying, setIsPlaying] = useState<boolean>(() => timelineStore.getState().isPlaying);
+  const [loop, setLoop] = useState<boolean>(() => timelineStore.getState().loop);
+  const [animationTab, setAnimationTab] = useState<AnimationEditorTab>('timeline');
+
+  // Automatically show Dope Sheet when switching to animation workspace
+  useEffect(() => {
+    if (activeWorkspaceId === 'animation') {
+      setAnimationTab('dopesheet');
+    }
+  }, [activeWorkspaceId]);
 
   // 5. Modals States
   const [isAboutOpen, setIsAboutOpen] = useState<boolean>(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(false);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState<boolean>(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
+  const [isKeyframeMenuOpen, setIsKeyframeMenuOpen] = useState<boolean>(false);
+  const [keyframeMenuPosition, setKeyframeMenuPosition] = useState<
+    { x: number; y: number } | undefined
+  >(undefined);
+  const mousePosRef = useRef<{ x: number; y: number }>({ x: 400, y: 300 });
+
+  // Track cursor position for context popups
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      mousePosRef.current = { x: e.clientX, y: e.clientY };
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
   // Load initial document if provided
   useEffect(() => {
@@ -433,11 +462,49 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
           initialProject.document.nodes,
           initialProject.document.collections || {},
         );
+      if (initialProject.document.timeline) {
+        timelineStore.loadTimeline(initialProject.document.timeline);
+      }
       commandManager.clear();
       setIsDirty(false);
       setSaveStatus('saved');
     }
   }, [initialProject?.document, sceneStore, commandManager]);
+
+  // Subscribe to timelineStore and activate high-resolution PlaybackEngine
+  useEffect(() => {
+    const st = timelineStore.getState();
+    setCurrentFrame(st.currentFrame);
+    setStartFrame(st.startFrame);
+    setEndFrame(st.endFrame);
+    setFps(st.fps);
+    setIsPlaying(st.isPlaying);
+    setLoop(st.loop);
+
+    const unsub = timelineStore.subscribe((state) => {
+      setCurrentFrame(state.currentFrame);
+      setStartFrame(state.startFrame);
+      setEndFrame(state.endFrame);
+      setFps(state.fps);
+      setIsPlaying(state.isPlaying);
+      setLoop(state.loop);
+    });
+
+    const engine = new PlaybackEngine(timelineStore);
+    const playbackUnsub = timelineStore.subscribe((state) => {
+      if (state.isPlaying && !engine.isRunning()) {
+        engine.start();
+      } else if (!state.isPlaying && engine.isRunning()) {
+        engine.stop();
+      }
+    });
+
+    return () => {
+      unsub();
+      playbackUnsub();
+      engine.stop();
+    };
+  }, []);
 
   // Notify parent of session state changes
   useEffect(() => {
@@ -464,23 +531,6 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
     isCommandPaletteOpen,
     onSessionChange,
   ]);
-
-  // Timeline playback loop
-  useEffect(() => {
-    if (!isPlaying) return;
-
-    const interval = 1000 / fps;
-    const timer = setInterval(() => {
-      setCurrentFrame((prev) => {
-        if (prev >= endFrame) {
-          return loop ? startFrame : endFrame;
-        }
-        return prev + 1;
-      });
-    }, interval);
-
-    return () => clearInterval(timer);
-  }, [isPlaying, fps, startFrame, endFrame, loop]);
 
   // Autosave handler (if enabled)
   useEffect(() => {
@@ -656,6 +706,157 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
     [sceneStore],
   );
 
+  // Transform commit handler from Viewport gizmo drag end with Auto-Keying
+  const handleTransformCommit = useCallback(
+    (nodeId: string, _oldTransform: Transform, newTransform: Transform) => {
+      const tl = timelineStore.getState();
+      if (!tl.autoKeyingEnabled) return;
+
+      const frame = tl.currentFrame;
+      const mode = tl.autoKeyMode;
+
+      let keyframeOpts: {
+        position?: Vector3;
+        rotation?: Euler;
+        scale?: Vector3;
+      } = {};
+
+      if (mode === 'loc') {
+        keyframeOpts = { position: newTransform.position };
+      } else if (mode === 'rot') {
+        keyframeOpts = { rotation: newTransform.rotation };
+      } else if (mode === 'scale') {
+        keyframeOpts = { scale: newTransform.scale };
+      } else {
+        keyframeOpts = {
+          position: newTransform.position,
+          rotation: newTransform.rotation,
+          scale: newTransform.scale,
+        };
+      }
+
+      const cmd = new InsertTransformKeyframeCommand(nodeId, frame, keyframeOpts);
+      const ctx = { state: sceneStore.getState(), dispatch: () => {} };
+      commandManager.execute(cmd, ctx);
+      setIsDirty(true);
+      setSaveStatus('unsaved');
+      platformBridge.notifications?.notify(
+        `Auto-Keyed transform for ${sceneState.nodes[nodeId]?.name || nodeId} @ frame ${frame}`,
+        'info',
+      );
+    },
+    [sceneStore, commandManager, sceneState.nodes, platformBridge],
+  );
+
+  // Keyframe Insertion Modal action (hotkey I)
+  const handleInsertKeyframeOption = useCallback(
+    (option: KeyframeOptionType) => {
+      const activeId = sceneState.activeNodeId;
+      if (!activeId) {
+        platformBridge.notifications?.notify('Select an object to insert keyframes', 'warning');
+        return;
+      }
+      const node = sceneState.nodes[activeId];
+      if (!node) return;
+
+      const frame = timelineStore.getState().currentFrame;
+      let opts: {
+        position?: Vector3;
+        rotation?: Euler;
+        scale?: Vector3;
+      } = {};
+
+      if (option === 'Location') {
+        opts = { position: node.transform.position };
+      } else if (option === 'Rotation') {
+        opts = { rotation: node.transform.rotation };
+      } else if (option === 'Scale') {
+        opts = { scale: node.transform.scale };
+      } else {
+        opts = {
+          position: node.transform.position,
+          rotation: node.transform.rotation,
+          scale: node.transform.scale,
+        };
+      }
+
+      const cmd = new InsertTransformKeyframeCommand(activeId, frame, opts);
+      const ctx = { state: sceneStore.getState(), dispatch: () => {} };
+      commandManager.execute(cmd, ctx);
+      setIsDirty(true);
+      setSaveStatus('unsaved');
+      platformBridge.notifications?.notify(
+        `Inserted ${option} keyframe for ${node.name} @ frame ${frame}`,
+        'success',
+      );
+    },
+    [sceneState.activeNodeId, sceneState.nodes, sceneStore, commandManager, platformBridge],
+  );
+
+  // Delete Keyframe at current frame for selected objects (Alt+I)
+  const handleDeleteKeyframeAtCurrentFrame = useCallback(() => {
+    const selectedIds =
+      sceneState.selectedNodeIds.length > 0
+        ? sceneState.selectedNodeIds
+        : sceneState.activeNodeId
+          ? [sceneState.activeNodeId]
+          : [];
+
+    if (selectedIds.length === 0) {
+      platformBridge.notifications?.notify('No object selected to delete keyframes', 'warning');
+      return;
+    }
+
+    const state = timelineStore.getState();
+    const frame = state.currentFrame;
+    let deletedCount = 0;
+    const ctx = { state: sceneStore.getState(), dispatch: () => {} };
+
+    for (const nodeId of selectedIds) {
+      const channelsToDelete: string[] = [];
+
+      for (const action of Object.values(state.actions)) {
+        for (const chan of action.channels) {
+          if (chan.targetNodeId === nodeId && chan.keyframes.some((k) => k.frame === frame)) {
+            channelsToDelete.push(chan.id);
+          }
+        }
+      }
+
+      for (const track of state.tracks) {
+        if (track.targetNodeId === nodeId && track.keyframes.some((k) => k.frame === frame)) {
+          channelsToDelete.push(track.id);
+        }
+      }
+
+      for (const chanId of channelsToDelete) {
+        const cmd = new DeleteKeyframeCommand(chanId, frame);
+        commandManager.execute(cmd, ctx);
+        deletedCount++;
+      }
+    }
+
+    if (deletedCount > 0) {
+      setIsDirty(true);
+      setSaveStatus('unsaved');
+      platformBridge.notifications?.notify(
+        `Deleted ${deletedCount} keyframe(s) at frame ${frame}`,
+        'info',
+      );
+    } else {
+      platformBridge.notifications?.notify(
+        `No keyframes found at frame ${frame} for selected object(s)`,
+        'info',
+      );
+    }
+  }, [
+    sceneState.selectedNodeIds,
+    sceneState.activeNodeId,
+    sceneStore,
+    commandManager,
+    platformBridge,
+  ]);
+
   // Workspace Switcher
   const handleSelectWorkspace = useCallback(
     (workspaceId: string) => {
@@ -684,6 +885,7 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
       if (!confirmed) return;
     }
     sceneStore.getState().resetToDefaultScene();
+    timelineStore.reset();
     commandManager.clear();
     setProjectName('Untitled.belt');
     setCurrentFilePath(undefined);
@@ -731,6 +933,9 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
         sceneStore
           .getState()
           .loadScene(res.document.root, res.document.nodes, res.document.collections || {});
+        if (res.document.timeline) {
+          timelineStore.loadTimeline(res.document.timeline);
+        }
         commandManager.clear();
         setIsDirty(false);
         setSaveStatus('saved');
@@ -1144,17 +1349,45 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
       // Hotkey: Space (play/pause timeline)
       else if (e.key === ' ') {
         e.preventDefault();
-        setIsPlaying((p) => !p);
+        timelineStore.getState().togglePlay();
       }
       // Hotkey: Left Arrow (prev frame)
       else if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        setCurrentFrame((f) => Math.max(startFrame, f - 1));
+        timelineStore.getState().prevFrame();
       }
       // Hotkey: Right Arrow (next frame)
       else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        setCurrentFrame((f) => Math.min(endFrame, f + 1));
+        timelineStore.getState().nextFrame();
+      }
+      // Hotkey: Down Arrow (step prev frame)
+      else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        timelineStore.getState().prevFrame();
+      }
+      // Hotkey: Up Arrow (step next frame)
+      else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        timelineStore.getState().nextFrame();
+      }
+      // Hotkey: I (insert keyframe menu) / Alt+I (delete keyframe) in Object Mode
+      else if (!isEditMode && !isSculptMode && (e.key === 'i' || e.key === 'I')) {
+        if (e.altKey) {
+          e.preventDefault();
+          handleDeleteKeyframeAtCurrentFrame();
+        } else if (!e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          if (sceneState.activeNodeId) {
+            setKeyframeMenuPosition(mousePosRef.current);
+            setIsKeyframeMenuOpen(true);
+          } else {
+            platformBridge.notifications?.notify(
+              'Select an object first to insert keyframes',
+              'info',
+            );
+          }
+        }
       }
       // Hotkey: Ctrl+K or F3 (command palette)
       else if (((e.key === 'k' || e.key === 'K') && (e.ctrlKey || e.metaKey)) || e.key === 'F3') {
@@ -1589,6 +1822,7 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
                 showOverlays={true}
                 showStats={true}
                 onConfigChange={handleViewportConfigChange}
+                onTransformCommit={handleTransformCommit}
                 className="w-full h-full"
               />
             </div>
@@ -1662,27 +1896,30 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
           />
         }
         timeline={
-          <TimelineBar
+          <AnimationBottomPanel
+            activeTab={animationTab}
+            onTabChange={setAnimationTab}
             currentFrame={currentFrame}
             startFrame={startFrame}
             endFrame={endFrame}
             fps={fps}
             isPlaying={isPlaying}
             loop={loop}
-            onSetFrame={setCurrentFrame}
-            onTogglePlay={() => setIsPlaying((p) => !p)}
-            onStop={() => {
-              setIsPlaying(false);
-              setCurrentFrame(startFrame);
-            }}
-            onNextFrame={() => setCurrentFrame((f) => Math.min(endFrame, f + 1))}
-            onPrevFrame={() => setCurrentFrame((f) => Math.max(startFrame, f - 1))}
-            onJumpStart={() => setCurrentFrame(startFrame)}
-            onJumpEnd={() => setCurrentFrame(endFrame)}
-            onToggleLoop={() => setLoop((l) => !l)}
-            onChangeStartFrame={setStartFrame}
-            onChangeEndFrame={setEndFrame}
-            onChangeFps={setFps}
+            onSetFrame={(f) => timelineStore.getState().setFrame(f)}
+            onTogglePlay={() => timelineStore.getState().togglePlay()}
+            onStop={() => timelineStore.getState().stop()}
+            onNextFrame={() => timelineStore.getState().nextFrame()}
+            onPrevFrame={() => timelineStore.getState().prevFrame()}
+            onJumpStart={() => timelineStore.getState().jumpToStart()}
+            onJumpEnd={() => timelineStore.getState().jumpToEnd()}
+            onToggleLoop={() => timelineStore.getState().setLoop(!timelineStore.getState().loop)}
+            onChangeStartFrame={(val) =>
+              timelineStore.getState().setFrameRange(val, timelineStore.getState().endFrame)
+            }
+            onChangeEndFrame={(val) =>
+              timelineStore.getState().setFrameRange(timelineStore.getState().startFrame, val)
+            }
+            onChangeFps={(val) => timelineStore.getState().setFps(val)}
             selectedObjectName={activeNode?.name}
             selectedObjectType={activeNode?.type}
             totalVertices={totalVertices}
@@ -1710,7 +1947,20 @@ export const EditorStudio: React.FC<EditorStudioProps> = ({
         defaultShadingMode={shadingMode}
         onChangeDefaultShadingMode={setShadingMode}
         defaultFps={fps}
-        onChangeDefaultFps={setFps}
+        onChangeDefaultFps={(f) => {
+          setFps(f);
+          timelineStore.getState().setFps(f);
+        }}
+      />
+
+      {/* Keyframe Menu Modal (Hotkey I) */}
+      <KeyframeMenuModal
+        isOpen={isKeyframeMenuOpen}
+        position={keyframeMenuPosition}
+        targetNodeName={activeNode?.name}
+        currentFrame={currentFrame}
+        onClose={() => setIsKeyframeMenuOpen(false)}
+        onSelectOption={handleInsertKeyframeOption}
       />
 
       {/* Edit Mode Context Menu */}

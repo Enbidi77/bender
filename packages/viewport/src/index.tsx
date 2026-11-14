@@ -24,6 +24,7 @@ export * from './gizmos/TransformGizmo.js';
 export * from './gizmos/SelectionHighlight.js';
 export * from './sculpt/index.js';
 export * from './edit/index.js';
+export * from './animation/index.js';
 export * from './ui/ViewportToolbar.js';
 export * from './ui/ViewportInfoOverlay.js';
 export * from './ViewportCanvas.js';
